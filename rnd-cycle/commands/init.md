@@ -58,9 +58,11 @@ Initialized. No spec, architecture, or build plans yet.
 |---|------|----------|------|
 ```
 
-## Step 3 — Configure Status Line + Session Start Hook
+## Step 3 — Configure Status Line
 
-Create or update `.claude/settings.local.json` in the project directory:
+The session-start hook is registered automatically via the plugin's `hooks/hooks.json` — no manual configuration needed.
+
+Configure the status line by creating or updating `.claude/settings.local.json` in the project directory:
 
 ```json
 {
@@ -68,21 +70,13 @@ Create or update `.claude/settings.local.json` in the project directory:
     "type": "command",
     "command": "bash ~/.claude/plugins/cache/software-dev-market/rnd/*/scripts/rnd-statusline.sh",
     "refreshInterval": 10
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "type": "command",
-        "command": "bash ~/.claude/plugins/cache/software-dev-market/rnd/*/scripts/rnd-session-start.sh"
-      }
-    ]
   }
 }
 ```
 
 The `*` glob matches whatever version is cached, so the path survives plugin updates.
 
-If the file already exists, merge these settings — don't overwrite existing settings. On re-run, check for stale paths (old marketplace or plugin names) and update them.
+If the file already exists, merge this setting — don't overwrite existing settings.
 
 ## Step 4 — Onboarding Report
 
@@ -93,7 +87,7 @@ Print:
 
 ✅ .rnd/ directory created
 ✅ Status line configured
-✅ Session start hook configured
+✅ Session start hook registered via plugin (automatic)
 
 ## Lifecycle
 

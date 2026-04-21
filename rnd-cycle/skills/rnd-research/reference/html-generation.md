@@ -15,7 +15,7 @@
 ## Generation Steps
 
 ### Step 1: Read McKinsey Template
-Load template from: `~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/templates/mckinsey_report_template.html`
+Load template from: `${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/templates/mckinsey_report_template.html`
 
 ### Step 2: Extract Key Metrics
 Extract 3-4 key quantitative findings for dashboard display at top.
@@ -24,7 +24,7 @@ Extract 3-4 key quantitative findings for dashboard display at top.
 
 Use Python script:
 ```bash
-python ~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/scripts/md_to_html.py [markdown_report_path]
+python ${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/scripts/md_to_html.py [markdown_report_path]
 ```
 
 **Script outputs two parts:**
@@ -71,7 +71,7 @@ NOTE: This step is optional for speed. Basic [N] citations are sufficient.
 ### Step 6: Verify HTML
 
 ```bash
-python ~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/scripts/verify_html.py --html [html_path] --md [md_path]
+python ${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/scripts/verify_html.py --html [html_path] --md [md_path]
 ```
 - Pass: Proceed to open
 - Fail: Fix errors and re-run

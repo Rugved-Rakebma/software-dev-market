@@ -60,13 +60,13 @@ Mode Selection
 5. **Long reports (>18K words):** Load [continuation.md](./reference/continuation.md)
 
 **Templates:**
-- Report structure: `~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/templates/report_template.md`
-- HTML styling: `~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/templates/mckinsey_report_template.html`
+- Report structure: `${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/templates/report_template.md`
+- HTML styling: `${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/templates/mckinsey_report_template.html`
 
 **Scripts:**
-- `python ~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/scripts/validate_report.py --report [path]`
-- `python ~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/scripts/verify_citations.py --report [path]`
-- `python ~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/scripts/md_to_html.py [markdown_path]`
+- `python ${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/scripts/validate_report.py --report [path]`
+- `python ${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/scripts/verify_citations.py --report [path]`
+- `python ${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/scripts/md_to_html.py [markdown_path]`
 
 ---
 

@@ -17,8 +17,5 @@
     "verification",
     "debugging",
     "specification"
-  ],
-  "commands": "./commands/",
-  "agents": "./agents/",
-  "skills": "./skills/"
+  ]
 }

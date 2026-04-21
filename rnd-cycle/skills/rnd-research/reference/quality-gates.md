@@ -5,7 +5,7 @@
 ### Citation Verification
 
 ```bash
-python ~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/scripts/verify_citations.py --report [path]
+python ${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/scripts/verify_citations.py --report [path]
 ```
 
 **Checks:**
@@ -18,7 +18,7 @@ python ~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/scr
 ### Structure & Quality Validation
 
 ```bash
-python ~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/scripts/validate_report.py --report [path]
+python ${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/scripts/validate_report.py --report [path]
 ```
 
 **9 automated checks:**
@@ -40,8 +40,8 @@ python ~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/scr
 
 **After generating ANY report, run this loop:**
 
-1. Run `python ~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/scripts/validate_report.py --report [path]`
-2. Run `python ~/.claude/plugins/cache/software-dev-market/rnd/*/skills/rnd-research/scripts/verify_citations.py --report [path]`
+1. Run `python ${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/scripts/validate_report.py --report [path]`
+2. Run `python ${CLAUDE_PLUGIN_ROOT}/skills/rnd-research/scripts/verify_citations.py --report [path]`
 3. If EITHER fails:
    - Read error output carefully
    - Fix the specific issues identified

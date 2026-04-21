@@ -166,7 +166,7 @@ These agents never touch code. They think, plan, research, and challenge.
 
 | Agent | Role | Spawned By |
 |-------|------|-----------|
-| **rnd-architect** | System design, tech stack selection, roadmaps | `/rnd:spec`, `/rnd:design` |
+| **rnd-architect** | System design, tech stack selection, roadmaps | Batch scenarios (skill loaded by `/rnd:spec`, `/rnd:design`) |
 | **rnd-critic** | Adversarial validation — GOOD / NEEDS MAJOR WORK / BAD verdicts | `/rnd:validate`, `/rnd:plan` |
 | **rnd-planner** | Decomposes architecture into executable plans with wave assignments | `/rnd:plan` |
 | **rnd-analyst** | Evidence-based document investigation (specs, proposals, PRDs) | `/rnd:audit` |
