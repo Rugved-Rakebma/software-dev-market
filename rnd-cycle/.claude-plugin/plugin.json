@@ -1,0 +1,24 @@
+{
+  "name": "rnd",
+  "version": "2.0.0",
+  "description": "R&D lifecycle system — structured spec, research, planning, build, verification, and debugging with 10 specialized agents, 5 skills, and 15 commands",
+  "author": {
+    "name": "Rugved Ambekar",
+    "url": "https://github.com/Rugved-Rakebma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "rnd",
+    "lifecycle",
+    "build",
+    "architecture",
+    "agents",
+    "planning",
+    "verification",
+    "debugging",
+    "specification"
+  ],
+  "commands": "./commands/",
+  "agents": "./agents/",
+  "skills": "./skills/"
+}

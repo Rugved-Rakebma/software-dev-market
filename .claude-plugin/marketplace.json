@@ -1,0 +1,15 @@
+{
+  "name": "software-dev-market",
+  "owner": {
+    "name": "Rugved Ambekar",
+    "url": "https://github.com/Rugved-Rakebma"
+  },
+  "plugins": [
+    {
+      "name": "rnd",
+      "source": "./rnd-cycle/",
+      "description": "R&D lifecycle system — structured spec, research, planning, build, verification, and debugging with 10 specialized agents, 5 skills, and 15 commands",
+      "version": "2.0.0"
+    }
+  ]
+}
