@@ -68,13 +68,13 @@ Configure the status line by creating or updating `.claude/settings.local.json` 
 {
   "statusLine": {
     "type": "command",
-    "command": "bash ~/.claude/plugins/cache/software-dev-market/rnd/*/scripts/rnd-statusline.sh",
+    "command": "bash \"$(ls -d ~/.claude/plugins/cache/software-dev-market/rnd/*/scripts/rnd-statusline.sh | tail -1)\"",
     "refreshInterval": 10
   }
 }
 ```
 
-The `*` glob matches whatever version is cached, so the path survives plugin updates.
+The `ls | tail -1` pattern picks the latest version if multiple are cached, preventing glob expansion issues.
 
 If the file already exists, merge this setting — don't overwrite existing settings.
 
