@@ -1,16 +1,17 @@
-# rnd — R&D Lifecycle for Claude Code
+# rnd — Project Lifecycle for Claude Code
 
-Turn Claude Code into a structured R&D system — from idea to shipped code with 10 specialized agents, persistent state, and zero context loss between sessions.
+10 specialized agents, persistent state, zero context loss between sessions.
 
 ```
-claude plugin install rnd@software-dev-market
+/plugin marketplace add Rugved-Rakebma/software-dev-market
+/plugin install rnd@software-dev-market
 ```
 
 ---
 
 ## The Problem
 
-Claude Code is powerful but stateless. Every session starts cold. Complex projects need structure — specs, decisions, plans, verification — and without lifecycle discipline, AI coding is fast but fragile. Context gets lost, scope creeps, nothing gets verified, and there's no audit trail.
+Claude Code is powerful but stateless. Every session starts cold. Without lifecycle discipline, AI coding is fast but fragile — context gets lost, scope creeps, nothing gets verified, no audit trail.
 
 This plugin adds the missing lifecycle.
 
@@ -19,103 +20,186 @@ This plugin adds the missing lifecycle.
 ## Quick Start
 
 ```
-/rnd:init my-project          # Create .rnd/ state, configure hooks
+/rnd:init my-project          # Create .rnd/ state, configure status line
 /rnd:spec Build a task API    # Turn the idea into structured requirements
 /rnd:status                   # See where you are and what's next
 ```
 
-Every new session auto-loads your project state. Run `/rnd:help` anytime for the full reference.
+Every new session auto-loads your project state via the plugin's SessionStart hook.
 
 ---
 
-## The Lifecycle
+## The 8 Cycles
 
-### Initial Build — Idea to Shipped Code
-
-The first time through, you follow the full pipeline. Each step produces an artifact that feeds the next.
+### 1. Greenfield — Idea to first working code
 
 ```
-/rnd:init       → .rnd/ skeleton + session hooks
-     ↓
-/rnd:spec       → .rnd/spec/spec.md (requirements with REQ-IDs)
-     ↓
-/rnd:research   → .rnd/research/ (citation-backed landscape analysis)
-     ↓
-/rnd:decide     → .rnd/decisions/ (ADRs — locked technology choices)
-     ↓
-/rnd:design     → .rnd/architecture/current.md (system architecture + roadmap)
-     ↓
-/rnd:plan       → .rnd/build/plans/ (executable plans with wave assignments)
-     ↓
-/rnd:validate   → stress-test plans before committing to code
-     ↓
-/rnd:c-build    → working code (one agent per plan, parallel within waves)
-     ↓
-/rnd:c-verify   → .rnd/verifications/ (spec compliance + quality + security)
+  init → spec → research → decide → design → plan → validate → build → verify
+   │      │        │          │        │        │        │         │        │
+   │    [main]  [rnd-       [main]  [main]  [rnd-    [rnd-     [rnd-    [rnd-code-
+   │   session  researcher] session session  planner] critic]   coder]   spec-checker]
+   │      +                   +       +        +                  +     [rnd-code-
+   │   rnd-architect        rnd-   rnd-     rnd-              [code-    reviewer]
+   │     skill             critic  architect critic            simpli- [rnd-code-
+   │                        skill   skill                      fier]    analyst]
+   │
+  [main session — creates .rnd/ skeleton]
 ```
 
-You don't have to run every step. Skip `/rnd:research` if you already know the landscape. Skip `/rnd:validate` if the plans are simple. The lifecycle is a guide, not a straitjacket.
+You don't have to run every step. Skip research if you know the landscape. Skip validate if the plans are simple. The lifecycle is a guide, not a straitjacket.
 
-### Iteration — Build/Verify/Fix Cycle
-
-After the initial build, most work is a tight loop:
+### 2. Build/Verify Loop — Tight iteration during active development
 
 ```
-/rnd:c-build    → implement changes
-     ↓
-/rnd:c-verify   → check spec compliance, code quality, security
-     ↓
-  PASS? → done
-  FAIL? → fix issues, run /rnd:c-build again
-     ↓
-/rnd:c-debug    → if a specific bug needs investigation
-     ↓
-/rnd:c-build    → apply the fix
-     ↓
-/rnd:c-verify   → verify the fix didn't break anything
+         ┌──────────────────────────────────────┐
+         │                                      │
+         ▼                                      │
+       build ────────► verify ────► PASS ✓      │
+         │                │                     │
+    [rnd-coder]     [rnd-code-spec-checker]     │
+    [code-simplifier] [rnd-code-reviewer]       │
+         │            [rnd-code-analyst]         │
+         │                │                     │
+         │              FAIL                    │
+         │                │                     │
+         │          file:line issues             │
+         │                │                     │
+         └────────────────┘ (build fixes them)  │
+                                                │
+         max iterations → escalate to user ─────┘
 ```
 
-The verify step spawns three independent agents in parallel — a spec-checker, a code reviewer, and a security analyst. If any of them return FAIL, you get specific file:line issues to fix.
-
-### Bug Hunting
-
-When something breaks and you don't know why:
+### 3. Debug — Something's broken, find root cause
 
 ```
-/rnd:c-debug "API returns 500 intermittently on form submit"
+  bug report
+      │
+      ▼
+    debug ─────────► root cause found
+      │                    │
+  [rnd-code-              │
+   debugger]              ▼
+      │              build (fix) ──► verify
+      │                  │              │
+      │             [rnd-coder]    [rnd-code-
+      │             [code-          spec-checker]
+      │              simplifier]   [rnd-code-
+      │                             reviewer]
+      ▼                            [rnd-code-
+  .rnd/debug/                       analyst]
+  session.md
+  knowledge-base.md   (related bugs → BACKLOG CANDIDATE)
 ```
 
-The debugger uses scientific method — hypothesis testing with persistent session state at `.rnd/debug/`. If the investigation spans multiple sessions, it picks up where it left off. Related bugs found during investigation get reported as backlog candidates, not fixed out of scope.
+Debug sessions persist across conversations. If an investigation spans multiple sessions, the debugger picks up where it left off.
 
-### Backlog — Tracking What You Find Along the Way
-
-During build, verify, and debug cycles, agents constantly discover issues outside their current scope — minor bugs, tech debt, missing edge cases, security concerns. In v1 these were either fixed immediately (scope creep) or lost after the session.
-
-Now agents report findings as `BACKLOG CANDIDATE` items. The main session collects them and offers to create tracked items:
+### 4. Backlog Drain — Processing accumulated issues
 
 ```
-/rnd:backlog                  # list all open items by priority
-/rnd:backlog add "description"  # create a new item interactively
-/rnd:backlog close BUG-003    # close with resolution
-/rnd:backlog promote FEAT-002 # promote to full lifecycle (/rnd:spec)
+  /rnd:backlog (review)
+        │
+        ├── small items (BUG, NIT, DEBT)
+        │       │
+        │       ▼
+        │     build ──► verify
+        │       │          │
+        │  [rnd-coder]  [rnd-code-spec-checker]
+        │  [code-       [rnd-code-reviewer]
+        │   simplifier] [rnd-code-analyst]
+        │
+        └── large items (FEAT, major DEBT)
+                │
+                ▼
+          /rnd:backlog promote
+                │
+                ▼
+          ┌─ GREENFIELD CYCLE (from spec) ─┐
 ```
 
-Items are categorized (BUG, DEBT, UX, PERF, SEC, FEAT), prioritized (critical/high/medium/low), and tracked with file references and discovery context. Small items get fixed in a future build wave. Large items get promoted to their own spec and follow the full lifecycle.
+Agents never fix issues outside their current scope. They report `BACKLOG CANDIDATE` items — categorized (BUG, DEBT, UX, PERF, SEC, FEAT), prioritized, with file references. Nothing discovered is lost.
 
-### Evolving the Architecture
-
-When requirements change or you need to add major features:
+### 5. Feature Evolution — Adding to an existing system
 
 ```
-/rnd:spec "Add real-time collaboration"   # extend the spec
-/rnd:design                               # revise architecture (old version archived)
-/rnd:plan                                 # generate new build plans
-/rnd:validate                             # stress-test before building
-/rnd:c-build                              # execute
-/rnd:c-verify                             # verify
+  current.md ──► history/                (auto-archived)
+                    │
+  spec (extend) ──► design (revise) ──► plan ──► validate ──► build ──► verify
+       │                │                 │          │           │          │
+     [main]          [main]          [rnd-      [rnd-      [rnd-      [rnd-code-
+    session          session          planner]   critic]    coder]      spec-checker]
+       +                +               +                  [code-     [rnd-code-
+    rnd-architect    rnd-architect    rnd-                   simpli-    reviewer]
+      skill            skill          critic                fier]     [rnd-code-
+                                                                       analyst]
+
+  .rnd/decisions/ remain LOCKED (constraints for new design)
 ```
 
-Previous architecture is automatically archived to `.rnd/architecture/history/`. Decisions remain locked unless explicitly revisited. The state never loses history — old entries compress into phase summaries instead of being deleted.
+Previous architecture is automatically archived. Decisions stay locked unless explicitly revisited. State never loses history — old entries compress into phase summaries.
+
+### 6. Research Spike — Exploring before committing
+
+```
+  question
+      │
+      ▼
+   research ──► decide (ADR)
+      │              │
+  [rnd-           [main session
+   researcher]     + rnd-critic skill]
+      │              │
+      ▼              ▼
+  .rnd/research/  .rnd/decisions/
+      │              │
+      └──────┬───────┘
+             │
+             ▼
+    back to triggering cycle
+    (design, plan, or spec)
+```
+
+### 7. Audit / Onboard — Understanding before acting
+
+```
+  existing codebase              existing document
+        │                              │
+        ▼                              ▼
+   /rnd:audit                     /rnd:audit
+   (code mode)                   (doc mode)
+        │                              │
+  [rnd-code-analyst]           [rnd-analyst]
+   (up to 4 parallel:              │
+    tech/arch/quality/             ▼
+    concerns)                 .rnd/audit/
+        │
+        ▼
+   .rnd/audit/
+        │
+        ├──► feeds /rnd:spec (gaps → new requirements)
+        ├──► feeds /rnd:design (architecture concerns)
+        └──► feeds /rnd:backlog (issues discovered)
+```
+
+### 8. Plan Revision — Plans fail validation
+
+```
+         ┌──────────────────────────┐
+         │                          │
+         ▼                          │
+       plan ────► validate          │
+         │            │             │
+    [rnd-planner] [rnd-critic]      │
+         │            │             │
+         │          GOOD ──► build  │
+         │            │             │
+         │       NEEDS WORK         │
+         │            │             │
+         │       feedback           │
+         │            │             │
+         └────────────┘             │
+                                    │
+         max 3 loops → escalate ────┘
+```
 
 ---
 
@@ -124,7 +208,7 @@ Previous architecture is automatically archived to `.rnd/architecture/history/`.
 ### Setup
 | Command | What It Does |
 |---------|-------------|
-| `/rnd:init` | Create `.rnd/` skeleton, configure status line and session hooks |
+| `/rnd:init` | Create `.rnd/` skeleton, configure status line |
 
 ### Non-Code — Planning and Strategy
 | Command | What It Does |
@@ -140,7 +224,7 @@ Previous architecture is automatically archived to `.rnd/architecture/history/`.
 ### Code — Build and Verify
 | Command | What It Does |
 |---------|-------------|
-| `/rnd:c-build` | Execute build plans — one coder agent per plan, parallel within waves |
+| `/rnd:c-build` | Execute build plans — one coder per plan, parallel within waves |
 | `/rnd:c-verify` | Full validation — spec compliance + code quality + security audit |
 | `/rnd:c-debug` | Scientific debugging with hypothesis tracking and session persistence |
 
@@ -154,43 +238,35 @@ Previous architecture is automatically archived to `.rnd/architecture/history/`.
 
 ---
 
-## Why 10 Agents
-
-Most AI coding tools use one agent that does everything. This plugin uses 10 specialists because **separation of concerns produces better results**.
-
-The coder doesn't review its own work — that's a conflict of interest. The spec-checker doesn't trust the coder's report — it reads the actual code independently. The critic is adversarial by design — it exists to find flaws, not to encourage.
+## Agents
 
 ### Non-Code Domain
 
-These agents never touch code. They think, plan, research, and challenge.
-
-| Agent | Role | Spawned By |
-|-------|------|-----------|
-| **rnd-architect** | System design, tech stack selection, roadmaps | Batch scenarios (skill loaded by `/rnd:spec`, `/rnd:design`) |
-| **rnd-critic** | Adversarial validation — GOOD / NEEDS MAJOR WORK / BAD verdicts | `/rnd:validate`, `/rnd:plan` |
-| **rnd-planner** | Decomposes architecture into executable plans with wave assignments | `/rnd:plan` |
-| **rnd-analyst** | Evidence-based document investigation (specs, proposals, PRDs) | `/rnd:audit` |
-| **rnd-researcher** | Autonomous 8-phase research pipeline with citation tracking | `/rnd:research` |
+| Agent | Role |
+|-------|------|
+| **rnd-architect** | System design, tech stack selection, roadmaps |
+| **rnd-critic** | Adversarial validation — GOOD / NEEDS MAJOR WORK / BAD verdicts |
+| **rnd-planner** | Decomposes architecture into executable plans with wave assignments |
+| **rnd-analyst** | Evidence-based document investigation (specs, proposals, PRDs) |
+| **rnd-researcher** | Autonomous 8-phase research pipeline with citation tracking |
 
 ### Code Domain
 
-These agents read and write code. They implement, review, and debug.
+| Agent | Role |
+|-------|------|
+| **rnd-coder** | Implements a single plan (2-3 tasks), commits per task, isolated worktree |
+| **rnd-code-spec-checker** | Adversarial — reads code independently, does NOT trust the coder |
+| **rnd-code-reviewer** | Two-layer review: tactical quality + integration wiring verification |
+| **rnd-code-analyst** | Codebase audit, 4-level verification, security review (STRIDE + OWASP) |
+| **rnd-code-debugger** | Scientific-method debugging with 8 techniques and persistent sessions |
 
-| Agent | Role | Spawned By |
-|-------|------|-----------|
-| **rnd-coder** | Implements a single plan (2-3 tasks), commits per task, reports status | `/rnd:c-build` |
-| **rnd-code-spec-checker** | Adversarial — reads code independently, does NOT trust the coder | `/rnd:c-verify` |
-| **rnd-code-reviewer** | Two-layer review: tactical quality + integration wiring verification | `/rnd:c-verify` |
-| **rnd-code-analyst** | Codebase audit, 4-level verification, security review (STRIDE + OWASP) | `/rnd:c-verify`, `/rnd:audit` |
-| **rnd-code-debugger** | Scientific-method debugging with 8 techniques and persistent sessions | `/rnd:c-debug` |
-
-Code and non-code agents never cross domains. The architect designs but never implements. The coder implements but never designs. This boundary prevents the most common failure mode in AI-assisted development: an agent making architectural decisions while trying to fix a bug.
+Code and non-code agents never cross domains.
 
 ---
 
-## How State Works
+## State
 
-Everything persists in the `.rnd/` directory at the project root. New sessions auto-load context via the session-start hook — the agent knows where you left off without being told.
+Everything persists in `.rnd/` at the project root. New sessions auto-load context via the SessionStart hook.
 
 ```
 .rnd/
@@ -204,59 +280,32 @@ Everything persists in the `.rnd/` directory at the project root. New sessions a
 │   └── NNN-{slug}.md           # Individual ADRs (locked constraints)
 ├── architecture/
 │   ├── current.md              # Active architecture design
-│   └── history/
-│       └── {date}-current.md   # Previous versions (auto-archived on redesign)
+│   └── history/                # Previous versions (auto-archived on redesign)
 ├── audit/
 │   └── {date}-{target}.md      # Audit reports (codebase or document)
 ├── build/
-│   ├── plans/
-│   │   └── phase-NN/
-│   │       └── NN-PLAN.md      # Executable plans with YAML frontmatter
+│   ├── plans/phase-NN/         # Executable plans with YAML frontmatter
 │   ├── progress.md             # Build completion status
 │   └── master-plan.md          # Native plan mode output (if using /rnd:claude-plan)
 ├── debug/
-│   ├── {issue}/
-│   │   └── session.md          # Hypothesis tracking, experiment results
+│   ├── {issue}/session.md      # Hypothesis tracking, experiment results
 │   └── knowledge-base.md       # Resolved patterns for future reference
-├── verifications/
-│   └── {date}-verification.md  # Consolidated reports (spec + quality + security)
+├── verifications/              # Consolidated reports (spec + quality + security)
 ├── backlog/
-│   ├── BUG-001-{slug}.md       # Open issues with YAML frontmatter
-│   ├── DEBT-002-{slug}.md
-│   └── closed/
-│       └── BUG-003-{slug}.md   # Resolved items (moved here, never deleted)
+│   ├── {CAT}-{NNN}-{slug}.md  # Open issues with YAML frontmatter
+│   └── closed/                 # Resolved items (moved here, never deleted)
 └── live-progress.md            # Build session checkpoint (deleted when build completes)
 ```
 
-### State Compression
-
-`state.md` uses progressive compression — recent entries stay detailed, older entries compress into phase summaries. Nothing is ever deleted. A project with 10 completed phases uses ~30 lines, not 300.
-
-### Session Continuity
-
-The session-start hook fires on every new Claude Code session. If `.rnd/` exists, it outputs a context summary with progressive disclosure — interrupted builds first (most urgent), then current status, backlog highlights, artifact inventory, and locked decisions. Full file contents load on demand when specific commands run.
-
-### Backlog Discipline
-
-Agents never fix issues outside their current task scope. They report findings as `BACKLOG CANDIDATE` with category, priority, file path, and description. The main session creates formal backlog items from these candidates. This prevents scope creep during build cycles while ensuring nothing discovered is lost.
-
----
-
-## Design Principles
-
-1. **Main session is the only orchestrator.** No nested agent spawning. Commands dispatch agents directly.
-2. **Code and non-code are separate domains.** Agents never cross the boundary.
-3. **Commands do one thing.** No overloaded commands spanning multiple domains.
-4. **Interactive commands load skills. Batch commands spawn agents.** User conversation stays in the main session. Autonomous work gets delegated.
-5. **State compounds, never truncates.** Progressive compression — recent stays detailed, old compresses. Nothing is deleted.
-6. **Backlog over scope creep.** Agents report findings, never fix out-of-scope issues.
+`state.md` uses progressive compression — recent entries stay detailed, older entries become phase summaries. Nothing is ever deleted.
 
 ---
 
 ## Install
 
 ```
-claude plugin install rnd@software-dev-market
+/plugin marketplace add Rugved-Rakebma/software-dev-market
+/plugin install rnd@software-dev-market
 ```
 
 Then in any project:
