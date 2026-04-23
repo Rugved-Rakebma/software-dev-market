@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 # rnd-statusline.sh — Claude Code status line for R&D projects
-# Reads session JSON from stdin + .rnd/ state from filesystem
-# Line 1: project │ model │ context bar │ cost │ duration
-# Line 2: R&D state with phase, build progress, backlog (if .rnd/ exists)
+# Line 1: 📦 project • 🌿 branch • model context-bar pct% • cost • duration
+# Line 2: Overview: 📝 specs • 🏗️ arch • 📐 plans • ⚠️ backlog • 🔒 decisions
 
 set -euo pipefail
 
-# --- Read stdin JSON ---
 INPUT=$(cat)
 
 if ! command -v jq &>/dev/null; then
@@ -17,27 +15,38 @@ fi
 # --- Parse session data ---
 PROJECT_DIR=$(echo "$INPUT" | jq -r '.workspace.project_dir // empty' 2>/dev/null)
 MODEL=$(echo "$INPUT" | jq -r '.model.display_name // "unknown"' 2>/dev/null)
-CTX_SIZE=$(echo "$INPUT" | jq -r '.context_window.context_window_size // 0' 2>/dev/null)
 CTX_PCT=$(echo "$INPUT" | jq -r '.context_window.used_percentage // 0' 2>/dev/null)
 COST=$(echo "$INPUT" | jq -r '.cost.total_cost_usd // 0' 2>/dev/null)
 DURATION_MS=$(echo "$INPUT" | jq -r '.cost.total_duration_ms // 0' 2>/dev/null)
 
 PROJECT_NAME=$(basename "${PROJECT_DIR:-$(pwd)}")
 
-# --- ANSI colors ---
-GREEN="\033[32m"
-YELLOW="\033[33m"
-RED="\033[31m"
-CYAN="\033[36m"
+# --- Git branch ---
+BRANCH=""
+if [ -n "$PROJECT_DIR" ] && [ -d "$PROJECT_DIR/.git" ]; then
+  BRANCH=$(git -C "$PROJECT_DIR" --no-optional-locks branch --show-current 2>/dev/null || true)
+fi
+BRANCH="${BRANCH:-—}"
+
+# --- Colors (matte 256-color palette) ---
+ORANGE="\033[38;5;208m"
+GREEN="\033[38;5;114m"
+YELLOW="\033[38;5;179m"
+RED="\033[38;5;167m"
+CYAN="\033[38;5;116m"
+BLUE="\033[38;5;110m"
+MAGENTA="\033[38;5;139m"
+WHITE="\033[97m"
 DIM="\033[2m"
 BOLD="\033[1m"
 RESET="\033[0m"
+SEP="${DIM} • ${RESET}"
 
-# --- Context bar (35 chars wide) ---
+# --- Context bar (30 chars) ---
 PCT_INT=${CTX_PCT%.*}
 PCT_INT=${PCT_INT:-0}
 
-BAR_WIDTH=35
+BAR_WIDTH=30
 FILLED=$((PCT_INT * BAR_WIDTH / 100))
 EMPTY=$((BAR_WIDTH - FILLED))
 [ "$FILLED" -gt "$BAR_WIDTH" ] && FILLED=$BAR_WIDTH && EMPTY=0
@@ -55,14 +64,6 @@ for ((i = 0; i < FILLED; i++)); do BAR+="█"; done
 for ((i = 0; i < EMPTY; i++)); do BAR+="░"; done
 BAR+="${RESET}"
 
-# --- Context window size label ---
-CTX_LABEL=""
-if [ "$CTX_SIZE" -ge 1000000 ]; then
-  CTX_LABEL=" (1M)"
-elif [ "$CTX_SIZE" -ge 200000 ]; then
-  CTX_LABEL=" (200K)"
-fi
-
 # --- Duration ---
 DURATION_SEC=$((DURATION_MS / 1000))
 if [ "$DURATION_SEC" -ge 3600 ]; then
@@ -76,107 +77,127 @@ fi
 # --- Cost ---
 COST_FMT=$(printf "\$%.2f" "$COST" 2>/dev/null || echo "\$${COST}")
 
-# --- Line 1: Session data ---
-printf "${BOLD}📁 %s${RESET} │ %s%s │ %b ${YELLOW}%s%%${RESET} │ ${CYAN}%s${RESET} │ ${DIM}⏱ %s${RESET}\n" \
-  "$PROJECT_NAME" "$MODEL" "$CTX_LABEL" "$BAR" "$PCT_INT" "$COST_FMT" "$DURATION_FMT"
+# =====================================================================
+# LINE 1: 📦 project • 🌿 branch • model bar pct% • cost • duration
+# =====================================================================
+printf "${ORANGE}${BOLD}📦 %s${RESET}${SEP}${GREEN}🌿 %s${RESET}${SEP}${BAR_COLOR}${BOLD}%s${RESET} %b ${BAR_COLOR}%s%%${RESET}${SEP}${CYAN}%s${RESET}${SEP}${MAGENTA}${DIM}⏱ %s${RESET}\n" \
+  "$PROJECT_NAME" "$BRANCH" "$MODEL" "$BAR" "$PCT_INT" "$COST_FMT" "$DURATION_FMT"
 
-# --- Line 2: R&D state (only if .rnd/ exists) ---
+# =====================================================================
+# LINE 2: Overview (only if .rnd/ exists)
+# =====================================================================
 RND_DIR="${PROJECT_DIR:-.}/.rnd"
 if [ ! -d "$RND_DIR" ]; then
   exit 0
 fi
 
-# --- Phase / status ---
-PHASE=""
-if [ -f "$RND_DIR/state.md" ]; then
-  # Try v2 header first, then v1
-  PHASE=$(awk '/^## Current Status/{found=1; next} found && /^##/{exit} found && NF{print; exit}' "$RND_DIR/state.md" 2>/dev/null)
-  if [ -z "$PHASE" ]; then
-    PHASE=$(awk '/^## Current Phase/{found=1; next} found && /^##/{exit} found && NF{print; exit}' "$RND_DIR/state.md" 2>/dev/null)
-  fi
-fi
-# Truncate long phase text
-if [ ${#PHASE} -gt 60 ]; then
-  PHASE="${PHASE:0:57}..."
-fi
-PHASE="${PHASE:-No status}"
-
-# --- Interrupted build check (highest priority) ---
-INTERRUPTED=false
-if [ -f "$RND_DIR/live-progress.md" ]; then
-  INTERRUPTED=true
-  WAVE_INFO=$(grep -m1 -oP 'Wave \d+/\d+' "$RND_DIR/live-progress.md" 2>/dev/null || echo "")
+# --- Count specs ---
+SPEC_COUNT=0
+if [ -d "$RND_DIR/spec" ]; then
+  shopt -s nullglob 2>/dev/null
+  for f in "$RND_DIR/spec"/*.md; do SPEC_COUNT=$((SPEC_COUNT + 1)); done
+  shopt -u nullglob 2>/dev/null
 fi
 
-# --- Build progress ---
-BUILD_PROGRESS=""
-if [ -f "$RND_DIR/build/progress.md" ]; then
-  BUILD_STATUS=$(grep -m1 'Status:' "$RND_DIR/build/progress.md" 2>/dev/null | sed 's/.*Status: *//' || true)
-  if [ -n "$BUILD_STATUS" ]; then
-    BUILD_PROGRESS="$BUILD_STATUS"
-  fi
+# --- Count architecture docs (current + history) ---
+ARCH_COUNT=0
+[ -f "$RND_DIR/architecture/current.md" ] && ARCH_COUNT=$((ARCH_COUNT + 1))
+if [ -d "$RND_DIR/architecture/history" ]; then
+  shopt -s nullglob 2>/dev/null
+  for f in "$RND_DIR/architecture/history"/*.md; do ARCH_COUNT=$((ARCH_COUNT + 1)); done
+  shopt -u nullglob 2>/dev/null
 fi
 
-# --- Requirement count ---
-REQ_COUNT=""
-if [ -f "$RND_DIR/spec/spec.md" ]; then
-  COUNT=$(grep -c 'REQ-' "$RND_DIR/spec/spec.md" 2>/dev/null || echo "0")
-  [ "$COUNT" -gt 0 ] && REQ_COUNT="${COUNT} reqs"
+# --- Count plans ---
+PLAN_COUNT=0
+if [ -d "$RND_DIR/build/plans" ]; then
+  shopt -s nullglob 2>/dev/null
+  for f in "$RND_DIR/build/plans"/*/*.md; do PLAN_COUNT=$((PLAN_COUNT + 1)); done
+  shopt -u nullglob 2>/dev/null
 fi
 
-# --- Backlog ---
-BACKLOG=""
+# --- Count backlog ---
+BACKLOG_TOTAL=0; BACKLOG_CRITICAL=0; BACKLOG_HIGH=0
 if [ -d "$RND_DIR/backlog" ]; then
-  TOTAL=0; CRITICAL=0; HIGH=0
   shopt -s nullglob 2>/dev/null
   for item in "$RND_DIR/backlog"/*.md; do
-    TOTAL=$((TOTAL + 1))
-    grep -q 'priority: critical' "$item" 2>/dev/null && CRITICAL=$((CRITICAL + 1))
-    grep -q 'priority: high' "$item" 2>/dev/null && HIGH=$((HIGH + 1))
+    BACKLOG_TOTAL=$((BACKLOG_TOTAL + 1))
+    grep -q 'priority: critical' "$item" 2>/dev/null && BACKLOG_CRITICAL=$((BACKLOG_CRITICAL + 1))
+    grep -q 'priority: high' "$item" 2>/dev/null && BACKLOG_HIGH=$((BACKLOG_HIGH + 1))
   done
   shopt -u nullglob 2>/dev/null
-  if [ "$TOTAL" -gt 0 ]; then
-    DETAIL=""
-    [ "$CRITICAL" -gt 0 ] && DETAIL="${CRITICAL} critical"
-    if [ "$HIGH" -gt 0 ]; then
-      [ -n "$DETAIL" ] && DETAIL+=", "
-      DETAIL+="${HIGH} high"
-    fi
-    BACKLOG="${TOTAL}${DETAIL:+ (${DETAIL})}"
-  fi
 fi
 
-# --- Decision count ---
-DECISION_COUNT=""
+# --- Count decisions ---
+DECISION_COUNT=0
 if [ -d "$RND_DIR/decisions" ]; then
-  COUNT=$(find "$RND_DIR/decisions" -maxdepth 1 -name '*.md' ! -name 'index.md' 2>/dev/null | wc -l | tr -d ' ')
-  [ "$COUNT" -gt 0 ] && DECISION_COUNT="${COUNT}"
+  shopt -s nullglob 2>/dev/null
+  for f in "$RND_DIR/decisions"/*.md; do
+    [ "$(basename "$f")" = "index.md" ] && continue
+    DECISION_COUNT=$((DECISION_COUNT + 1))
+  done
+  shopt -u nullglob 2>/dev/null
 fi
 
 # --- Assemble Line 2 ---
-if [ "$INTERRUPTED" = true ]; then
-  # Interrupted build — red alert, most urgent
-  LINE2="${RED}🔴 INTERRUPTED${RESET}"
-  [ -n "$WAVE_INFO" ] && LINE2+=" ${WAVE_INFO}"
-  LINE2+=" ${DIM}— resume /rnd:c-build${RESET}"
-  [ -n "$BACKLOG" ] && LINE2+=" │ ${YELLOW}⚠️ ${BACKLOG} backlog${RESET}"
-else
-  # Normal state
-  LINE2="${CYAN}[R&D]${RESET} ${PHASE}"
-
-  # Add segments
-  SEGMENTS=""
-  [ -n "$REQ_COUNT" ] && SEGMENTS+=" │ ${DIM}📋 ${REQ_COUNT}${RESET}"
-  if [ -n "$BACKLOG" ]; then
-    if [ "$CRITICAL" -gt 0 ]; then
-      SEGMENTS+=" │ ${RED}⚠️ ${BACKLOG} backlog${RESET}"
+# Check for interrupted build first
+if [ -f "$RND_DIR/live-progress.md" ]; then
+  WAVE_INFO=$(grep -m1 -oP 'Wave \d+/\d+' "$RND_DIR/live-progress.md" 2>/dev/null || echo "")
+  LINE2="${DIM}┗${RESET} ${RED}${BOLD}🔴 INTERRUPTED${RESET}"
+  [ -n "$WAVE_INFO" ] && LINE2+="${SEP}${WHITE}${WAVE_INFO}${RESET}"
+  LINE2+="${SEP}${DIM}resume ${CYAN}/rnd:c-build${RESET}"
+  if [ "$BACKLOG_TOTAL" -gt 0 ]; then
+    if [ "$BACKLOG_CRITICAL" -gt 0 ]; then
+      LINE2+="${SEP}${RED}⚠️ ${BACKLOG_TOTAL} backlog (${BACKLOG_CRITICAL} critical)${RESET}"
     else
-      SEGMENTS+=" │ ${YELLOW}⚠️ ${BACKLOG} backlog${RESET}"
+      LINE2+="${SEP}${YELLOW}⚠️ ${BACKLOG_TOTAL} backlog${RESET}"
     fi
   fi
-  [ -n "$DECISION_COUNT" ] && SEGMENTS+=" │ ${DIM}🔒 ${DECISION_COUNT} decisions${RESET}"
+else
+  # Normal overview
+  SEGMENTS=""
 
-  LINE2+="${SEGMENTS}"
+  [ "$SPEC_COUNT" -gt 0 ] && SEGMENTS+="${WHITE}📝 ${SPEC_COUNT} specs${RESET}"
+  if [ "$ARCH_COUNT" -gt 0 ]; then
+    [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
+    SEGMENTS+="${WHITE}🏗️ ${ARCH_COUNT} arch${RESET}"
+  fi
+  if [ "$PLAN_COUNT" -gt 0 ]; then
+    [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
+    SEGMENTS+="${WHITE}📐 ${PLAN_COUNT} plans${RESET}"
+  fi
+  if [ "$BACKLOG_TOTAL" -gt 0 ]; then
+    [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
+    SEGMENTS+="${WHITE}📬 ${BACKLOG_TOTAL} backlog${RESET}"
+    if [ "$BACKLOG_CRITICAL" -gt 0 ]; then
+      SEGMENTS+=" \033[38;5;180m(${BACKLOG_CRITICAL} critical)${RESET}"
+    elif [ "$BACKLOG_HIGH" -gt 0 ]; then
+      SEGMENTS+=" \033[38;5;180m(${BACKLOG_HIGH} high)${RESET}"
+    fi
+  fi
+  if [ "$DECISION_COUNT" -gt 0 ]; then
+    [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
+    SEGMENTS+="${WHITE}🔒 ${DECISION_COUNT} decisions${RESET}"
+  fi
+
+  # --- Last command ---
+  LAST_CMD_DISPLAY=""
+  if [ -f "$RND_DIR/.last-command" ]; then
+    LAST_RAW=$(cat "$RND_DIR/.last-command" 2>/dev/null)
+    LAST_NAME=$(echo "$LAST_RAW" | awk '{print $1}')
+    LAST_TIME=$(echo "$LAST_RAW" | awk '{print $2}' | grep -oE '[0-9]{2}:[0-9]{2}' | head -1)
+    if [ -n "$LAST_NAME" ]; then
+      LAST_CMD_DISPLAY="${WHITE}⚡ ${LAST_NAME}${RESET}"
+      [ -n "$LAST_TIME" ] && LAST_CMD_DISPLAY+="${DIM} ${LAST_TIME}${RESET}"
+    fi
+  fi
+
+  if [ -n "$SEGMENTS" ]; then
+    LINE2="${DIM}┗${RESET} ${SEGMENTS}"
+    [ -n "$LAST_CMD_DISPLAY" ] && LINE2+="${SEP}${LAST_CMD_DISPLAY}"
+  else
+    LINE2="${DIM}┗ empty — run /rnd:spec${RESET}"
+  fi
 fi
 
 printf "%b\n" "$LINE2"
