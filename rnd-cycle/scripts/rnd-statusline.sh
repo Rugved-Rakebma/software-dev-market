@@ -128,6 +128,14 @@ if [ -d "$RND_DIR/backlog" ]; then
   shopt -u nullglob 2>/dev/null
 fi
 
+# --- Count research reports ---
+RESEARCH_COUNT=0
+if [ -d "$RND_DIR/research" ]; then
+  shopt -s nullglob 2>/dev/null
+  for f in "$RND_DIR/research"/*.md; do RESEARCH_COUNT=$((RESEARCH_COUNT + 1)); done
+  shopt -u nullglob 2>/dev/null
+fi
+
 # --- Count decisions ---
 DECISION_COUNT=0
 if [ -d "$RND_DIR/decisions" ]; then
@@ -162,6 +170,10 @@ else
     [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
     SEGMENTS+="${WHITE}🏗️ ${ARCH_COUNT} arch${RESET}"
   fi
+  if [ "$RESEARCH_COUNT" -gt 0 ]; then
+    [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
+    SEGMENTS+="${WHITE}📚 ${RESEARCH_COUNT} research${RESET}"
+  fi
   if [ "$PLAN_COUNT" -gt 0 ]; then
     [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
     SEGMENTS+="${WHITE}📐 ${PLAN_COUNT} plans${RESET}"
@@ -183,12 +195,9 @@ else
   # --- Last command ---
   LAST_CMD_DISPLAY=""
   if [ -f "$RND_DIR/.last-command" ]; then
-    LAST_RAW=$(cat "$RND_DIR/.last-command" 2>/dev/null)
-    LAST_NAME=$(echo "$LAST_RAW" | awk '{print $1}')
-    LAST_TIME=$(echo "$LAST_RAW" | awk '{print $2}' | grep -oE '[0-9]{2}:[0-9]{2}' | head -1)
+    LAST_NAME=$(awk '{print $1}' "$RND_DIR/.last-command" 2>/dev/null)
     if [ -n "$LAST_NAME" ]; then
       LAST_CMD_DISPLAY="${WHITE}⚡ ${LAST_NAME}${RESET}"
-      [ -n "$LAST_TIME" ] && LAST_CMD_DISPLAY+="${DIM} ${LAST_TIME}${RESET}"
     fi
   fi
 
