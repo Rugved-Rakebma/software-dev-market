@@ -11,7 +11,7 @@ argument-hint: [optional: specific phase or wave to build]
 
 ## Resume Check
 
-Check for `.rnd/live-progress.md`. If it exists, a previous build session was interrupted:
+Check for `.rnd/build/progress.md` with frontmatter `status: in-progress`. If found, a previous build session was interrupted:
 - Read the progress file to understand what was completed
 - Present the state to the user: completed waves, in-progress wave, pending waves
 - Offer to resume from where the previous session left off
@@ -56,24 +56,30 @@ All plans in the wave must complete before proceeding to the next wave.
 
 ### Progress Tracking
 
-After each wave completes, update `.rnd/live-progress.md`:
+Maintain a single rolling progress file at `.rnd/build/progress.md`. On the first wave, create it with frontmatter `status: in-progress`. After each wave completes, update the same file in place:
 
 ```markdown
-# Live Progress — {project name}
+---
+status: in-progress
+started: {timestamp}
+last-updated: {timestamp}
+---
 
-## Session
-- Started: {timestamp}
-- Last updated: {timestamp}
+# Build Progress — {project name}
 
 ## Completed
-- Wave 1: {plans completed}, {status}
-- Wave 2: {plans completed}, {status}
+- {plan name} — wave {N}, {status}
+- {plan name} — wave {N}, {status}
 
 ## In Progress
-- Wave N: {plan name} — {current state}
+- {plan name} — wave {N}, {current state}
 
 ## Pending
-- Wave N+1: {plans remaining}
+- {plan name} — wave {N+1}
+- {plan name} — wave {N+1}
+
+## Deferred
+- {plan name} — {reason}
 
 ## Key Decisions Made This Session
 - {decision}: {rationale}
@@ -82,16 +88,17 @@ After each wave completes, update `.rnd/live-progress.md`:
 - {items discovered but not yet created}
 ```
 
+`## Completed` and `## Deferred` list one bullet per plan (not per wave) so the statusline can compute pending count.
+
 ### Context Preservation
 
-If context usage exceeds **50%**, write a full progress snapshot to `.rnd/live-progress.md` before continuing. This protects against auto-compaction losing working state.
+If context usage exceeds **50%**, write a full progress snapshot to `.rnd/build/progress.md` before continuing. This protects against auto-compaction losing working state.
 
 ## After All Waves
 
-1. **Create/update `.rnd/build/progress.md`** with final build status
+1. **Finalize `.rnd/build/progress.md`** — flip frontmatter `status: in-progress` → `status: complete`, update `last-updated`, and ensure all plans appear under `## Completed` or `## Deferred` (no remaining `## In Progress` or `## Pending` entries).
 2. **Collect BACKLOG CANDIDATE items** from all coder Concerns sections. If any found, offer to create backlog items: "Found {N} backlog candidates during build. Run `/rnd:backlog add` to create items, or I can create them now."
-3. **Delete `.rnd/live-progress.md`** — build is complete, progress captured in progress.md
-4. **Recommend**: "Build complete. Run `/rnd:c-verify` for full code validation."
+3. **Recommend**: "Build complete. Run `/rnd:c-verify` for full code validation."
 
 ## Persistence
 

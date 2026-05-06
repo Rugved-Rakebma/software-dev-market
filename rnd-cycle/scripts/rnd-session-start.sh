@@ -52,16 +52,6 @@ PROJECT_NAME="${PROJECT_NAME:-$(basename "$(pwd)")}"
 echo "━━━ R&D: ${PROJECT_NAME} ━━━"
 echo ""
 
-# --- Priority 1: Interrupted build warning ---
-if [ -f "$RND_DIR/live-progress.md" ]; then
-  echo "⚠️  INTERRUPTED BUILD — resume with /rnd:c-build"
-  WAVE_INFO=$(grep -m1 'Wave' "$RND_DIR/live-progress.md" 2>/dev/null || true)
-  if [ -n "$WAVE_INFO" ]; then
-    echo "   ${WAVE_INFO}"
-  fi
-  echo ""
-fi
-
 # --- Priority 2: Previous session summary ---
 if [ -n "$SESSION_ID" ] && [ -d "$RND_DIR/sessions" ]; then
   # Find the most recent ENDED session (not current one)
@@ -148,10 +138,12 @@ else
   echo "  Plans: ❌ missing"
 fi
 
-if [ -f "$RND_DIR/live-progress.md" ]; then
-  echo "  Build: ⏳ in progress"
-elif [ -f "$RND_DIR/build/progress.md" ]; then
-  echo "  Build: ✅ complete"
+if [ -f "$RND_DIR/build/progress.md" ]; then
+  if grep -qm1 '^status: in-progress' "$RND_DIR/build/progress.md" 2>/dev/null; then
+    echo "  Build: ⏳ in progress"
+  else
+    echo "  Build: ✅ complete"
+  fi
 else
   echo "  Build: ❌ not started"
 fi

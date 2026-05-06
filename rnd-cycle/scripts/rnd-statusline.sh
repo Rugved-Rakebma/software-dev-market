@@ -116,6 +116,28 @@ if [ -d "$RND_DIR/build/plans" ]; then
   shopt -u nullglob 2>/dev/null
 fi
 
+# --- Count pending plans (only meaningful once a build has started) ---
+PENDING_PLANS=0
+PROGRESS_FILE="$RND_DIR/build/progress.md"
+if [ -f "$PROGRESS_FILE" ] && [ "$PLAN_COUNT" -gt 0 ]; then
+  # New format: count "- " entries under ## Completed and ## Deferred sections
+  COMPLETED_PLANS=$(awk '/^## Completed/{f=1;next} f && /^## /{exit} f && /^- /{c++} END{print c+0}' "$PROGRESS_FILE" 2>/dev/null)
+  COMPLETED_PLANS=${COMPLETED_PLANS:-0}
+  DEFERRED_PLANS=$(awk '/^## Deferred/{f=1;next} f && /^## /{exit} f && /^- /{c++} END{print c+0}' "$PROGRESS_FILE" 2>/dev/null)
+  DEFERRED_PLANS=${DEFERRED_PLANS:-0}
+  # Legacy fallback: markdown table rows containing "completed" / "deferred"
+  if [ "$COMPLETED_PLANS" -eq 0 ]; then
+    COMPLETED_PLANS=$(grep -ic '^|.*| *completed *|' "$PROGRESS_FILE" 2>/dev/null || true)
+    COMPLETED_PLANS=${COMPLETED_PLANS:-0}
+  fi
+  if [ "$DEFERRED_PLANS" -eq 0 ]; then
+    DEFERRED_PLANS=$(grep -ic '^|.*| *deferred *|' "$PROGRESS_FILE" 2>/dev/null || true)
+    DEFERRED_PLANS=${DEFERRED_PLANS:-0}
+  fi
+  PENDING_PLANS=$((PLAN_COUNT - COMPLETED_PLANS - DEFERRED_PLANS))
+  [ "$PENDING_PLANS" -lt 0 ] && PENDING_PLANS=0
+fi
+
 # --- Count backlog ---
 BACKLOG_TOTAL=0; BACKLOG_CRITICAL=0; BACKLOG_HIGH=0
 if [ -d "$RND_DIR/backlog" ]; then
@@ -148,65 +170,52 @@ if [ -d "$RND_DIR/decisions" ]; then
 fi
 
 # --- Assemble Line 2 ---
-# Check for interrupted build first
-if [ -f "$RND_DIR/live-progress.md" ]; then
-  WAVE_INFO=$(grep -m1 -oP 'Wave \d+/\d+' "$RND_DIR/live-progress.md" 2>/dev/null || echo "")
-  LINE2="${DIM}┗${RESET} ${RED}${BOLD}🔴 INTERRUPTED${RESET}"
-  [ -n "$WAVE_INFO" ] && LINE2+="${SEP}${WHITE}${WAVE_INFO}${RESET}"
-  LINE2+="${SEP}${DIM}resume ${CYAN}/rnd:c-build${RESET}"
-  if [ "$BACKLOG_TOTAL" -gt 0 ]; then
-    if [ "$BACKLOG_CRITICAL" -gt 0 ]; then
-      LINE2+="${SEP}${RED}⚠️ ${BACKLOG_TOTAL} backlog (${BACKLOG_CRITICAL} critical)${RESET}"
-    else
-      LINE2+="${SEP}${YELLOW}⚠️ ${BACKLOG_TOTAL} backlog${RESET}"
-    fi
+SEGMENTS=""
+
+[ "$SPEC_COUNT" -gt 0 ] && SEGMENTS+="${WHITE}📝 ${SPEC_COUNT} specs${RESET}"
+if [ "$ARCH_COUNT" -gt 0 ]; then
+  [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
+  SEGMENTS+="${WHITE}🏗️ ${ARCH_COUNT} arch${RESET}"
+fi
+if [ "$RESEARCH_COUNT" -gt 0 ]; then
+  [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
+  SEGMENTS+="${WHITE}📚 ${RESEARCH_COUNT} research${RESET}"
+fi
+if [ "$PLAN_COUNT" -gt 0 ]; then
+  [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
+  SEGMENTS+="${WHITE}📐 ${PLAN_COUNT} plans${RESET}"
+  if [ "$PENDING_PLANS" -gt 0 ]; then
+    SEGMENTS+=" ${DIM}[${PENDING_PLANS} pending]${RESET}"
   fi
+fi
+if [ "$BACKLOG_TOTAL" -gt 0 ]; then
+  [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
+  SEGMENTS+="${WHITE}📬 ${BACKLOG_TOTAL} backlog${RESET}"
+  if [ "$BACKLOG_CRITICAL" -gt 0 ]; then
+    SEGMENTS+=" \033[38;5;180m(${BACKLOG_CRITICAL} critical)${RESET}"
+  elif [ "$BACKLOG_HIGH" -gt 0 ]; then
+    SEGMENTS+=" \033[38;5;180m(${BACKLOG_HIGH} high)${RESET}"
+  fi
+fi
+if [ "$DECISION_COUNT" -gt 0 ]; then
+  [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
+  SEGMENTS+="${WHITE}🔒 ${DECISION_COUNT} decisions${RESET}"
+fi
+
+# --- Last command ---
+LAST_CMD_DISPLAY=""
+if [ -f "$RND_DIR/.last-command" ]; then
+  LAST_NAME=$(awk '{print $1}' "$RND_DIR/.last-command" 2>/dev/null)
+  if [ -n "$LAST_NAME" ]; then
+    LAST_CMD_DISPLAY="${WHITE}⚡ ${LAST_NAME}${RESET}"
+  fi
+fi
+
+if [ -n "$SEGMENTS" ]; then
+  LINE2="${DIM}┗${RESET} ${SEGMENTS}"
+  [ -n "$LAST_CMD_DISPLAY" ] && LINE2+="${SEP}${LAST_CMD_DISPLAY}"
 else
-  # Normal overview
-  SEGMENTS=""
-
-  [ "$SPEC_COUNT" -gt 0 ] && SEGMENTS+="${WHITE}📝 ${SPEC_COUNT} specs${RESET}"
-  if [ "$ARCH_COUNT" -gt 0 ]; then
-    [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
-    SEGMENTS+="${WHITE}🏗️ ${ARCH_COUNT} arch${RESET}"
-  fi
-  if [ "$RESEARCH_COUNT" -gt 0 ]; then
-    [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
-    SEGMENTS+="${WHITE}📚 ${RESEARCH_COUNT} research${RESET}"
-  fi
-  if [ "$PLAN_COUNT" -gt 0 ]; then
-    [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
-    SEGMENTS+="${WHITE}📐 ${PLAN_COUNT} plans${RESET}"
-  fi
-  if [ "$BACKLOG_TOTAL" -gt 0 ]; then
-    [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
-    SEGMENTS+="${WHITE}📬 ${BACKLOG_TOTAL} backlog${RESET}"
-    if [ "$BACKLOG_CRITICAL" -gt 0 ]; then
-      SEGMENTS+=" \033[38;5;180m(${BACKLOG_CRITICAL} critical)${RESET}"
-    elif [ "$BACKLOG_HIGH" -gt 0 ]; then
-      SEGMENTS+=" \033[38;5;180m(${BACKLOG_HIGH} high)${RESET}"
-    fi
-  fi
-  if [ "$DECISION_COUNT" -gt 0 ]; then
-    [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
-    SEGMENTS+="${WHITE}🔒 ${DECISION_COUNT} decisions${RESET}"
-  fi
-
-  # --- Last command ---
-  LAST_CMD_DISPLAY=""
-  if [ -f "$RND_DIR/.last-command" ]; then
-    LAST_NAME=$(awk '{print $1}' "$RND_DIR/.last-command" 2>/dev/null)
-    if [ -n "$LAST_NAME" ]; then
-      LAST_CMD_DISPLAY="${WHITE}⚡ ${LAST_NAME}${RESET}"
-    fi
-  fi
-
-  if [ -n "$SEGMENTS" ]; then
-    LINE2="${DIM}┗${RESET} ${SEGMENTS}"
-    [ -n "$LAST_CMD_DISPLAY" ] && LINE2+="${SEP}${LAST_CMD_DISPLAY}"
-  else
-    LINE2="${DIM}┗ empty — run /rnd:spec${RESET}"
-  fi
+  LINE2="${DIM}┗ empty — run /rnd:spec${RESET}"
 fi
 
 printf "%b\n" "$LINE2"
