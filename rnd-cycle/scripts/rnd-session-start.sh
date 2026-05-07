@@ -58,7 +58,7 @@ if [ -n "$SESSION_ID" ] && [ -d "$RND_DIR/sessions" ]; then
   PREV_SESSION=$(grep -rl 'status: ended' "$RND_DIR/sessions"/*.md 2>/dev/null | while read -r f; do
     [ "$(basename "$f" .md)" = "$SESSION_ID" ] && continue
     echo "$f"
-  done | head -1)
+  done | head -1 || true)
 
   if [ -n "$PREV_SESSION" ]; then
     PREV_CMDS=$(grep -c '^- ' "$PREV_SESSION" 2>/dev/null || echo "0")
