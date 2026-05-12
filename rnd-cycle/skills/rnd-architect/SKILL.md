@@ -6,7 +6,21 @@ user-invocable: false
 
 # R&D Architect
 
-The rnd-architect skill is the consolidated knowledge base that powers architecture design capabilities. It contains five reference documents, each covering a specific domain of architecture expertise. Loaded by the main session during `/rnd:spec` and `/rnd:design`, and by the `rnd-architect` agent for batch scenarios.
+The rnd-architect skill is a consolidated knowledge base for architecture design. It contains five reference documents covering specific domains. Loaded by the main session during `/rnd:spec` and `/rnd:design`, and by the `rnd-architect` agent for batch scenarios.
+
+## When to Use This Skill
+
+This is **reference material** for medium-to-large architecture work, not a mandatory walkthrough. Match references to project scope:
+
+| Scope | Use these references |
+|---|---|
+| **Small** refactor (<1KLOC, single dev, 1–2 components, no new deps) | none — skip this skill |
+| **Standard** feature add (1–10KLOC) | `architecture-patterns.md` if changing pattern; `tech-stack-selection.md` if introducing new tech |
+| **Large** / greenfield / multi-team | references as relevant; not all five are needed for every project |
+
+The **scaling stages** (Startup → Enterprise), **multi-region patterns**, and **ML pipeline architecture** are written for systems serving production traffic. Do not apply them to internal tools, single-user agents, or local-only dev work.
+
+**When in doubt, skip a reference.** Producing more design than the project warrants is the failure mode this skill is most often involved in. The prescriptive section catalog (required / conditional / optional / forbidden) lives in `commands/design.md` — that is the source of truth for what an arch doc should contain.
 
 ## Reference Documents
 
@@ -115,23 +129,13 @@ Includes:
 Design Request
     │
     ▼
-[tech-stack-selection] → Select technology stack
+Assess scope (small / standard / large)
     │
-    ▼
-[architecture-patterns] → Select appropriate architecture
+    ├─ Small    → write doc per commands/design.md; skip this skill
     │
-    ▼
-[ml-cv-systems] → Design ML components (if applicable)
+    ├─ Standard → load 1–2 relevant references; recommend rnd-critic only if non-trivial
     │
-    ▼
-[scalability-planning] → Plan for growth stages
-    │
-    ▼
-Design detailed system architecture
-    │
-    ▼
-[roadmap-generation] → Create phased implementation plan
-    │
-    ▼
-Recommend validation by rnd-critic
+    └─ Large    → load references as needed; recommend rnd-critic
 ```
+
+The output structure (required / conditional / optional / forbidden sections) is defined in `commands/design.md`, not here. This skill provides domain knowledge to draw from when it's relevant — not a script to walk through.
