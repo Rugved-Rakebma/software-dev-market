@@ -26,6 +26,9 @@ metrics:
 ### Known Stubs
 [Any placeholder implementations left behind, with TODO markers]
 
+### Advisories
+[Findings flagged by the coder during execution — file:line, description, BACKLOG CANDIDATE tags. Observations, not blockers. Routed to backlog in Stage 8 of /rnd:c-run.]
+
 ### Self-Check
 - [ ] All files in key_files exist
 - [ ] All commits referenced are valid

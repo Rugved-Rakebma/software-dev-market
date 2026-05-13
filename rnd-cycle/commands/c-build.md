@@ -35,15 +35,16 @@ For each plan:
 **1. Spawn rnd-coder via the Agent tool:**
 - **description**: "Build: {plan name}"
 - **model**: opus
-- **prompt**: Include:
-  - **Full plan text inline** — the coder NEVER reads plan files itself
-  - Project context from `.rnd/state.md`
-  - Prior wave summaries (status reports from completed waves)
-  - Relevant spec requirements and architecture constraints
-  - Reference to `skills/rnd-build/reference/execution-methodology.md` and `skills/rnd-build/reference/escalation-protocol.md`
+- **prompt**: Include three inline blocks:
+  - **`plan_text`** — full plan text. The coder NEVER reads plan files itself.
+  - **`arch_slices`** — sections of `.rnd/architecture/current.md` referenced by the plan's `## Wires to` section. Parse the plan's Wires to bullets (e.g. "arch §5.1"); read those sections from the arch doc; embed inline. **Fallback:** if the plan has no `## Wires to` section, embed the full arch doc.
+  - **`spec_req_rows`** — rows from `.rnd/spec/spec.md` corresponding to the REQ-IDs in the plan's `requirements` frontmatter. Parse the frontmatter, look up each REQ row in the spec, embed inline.
+  - Plus: project context from `.rnd/state.md`, prior wave summaries (status reports from completed waves), references to `skills/rnd-build/reference/execution-methodology.md` and `skills/rnd-build/reference/escalation-protocol.md`.
+
+This three-block bundling implements the **Plan = task / Arch = shape / Spec = reqs** separation: plans stay slim because the coder receives the shape and requirements alongside the task.
 
 **2. Collect coder's status report:**
-- **DONE** or **DONE_WITH_CONCERNS** → continue
+- **DONE** or **DONE_WITH_ADVISORIES** → continue (advisories route to backlog in step 4)
 - **BLOCKED** or **NEEDS_CONTEXT** → surface to user, pause execution, wait for resolution
 
 **3. Spawn code-simplifier via the Agent tool:**
@@ -97,11 +98,11 @@ If context usage exceeds **50%**, write a full progress snapshot to `.rnd/build/
 ## After All Waves
 
 1. **Finalize `.rnd/build/progress.md`** — flip frontmatter `status: in-progress` → `status: complete`, update `last-updated`, and ensure all plans appear under `## Completed` or `## Deferred` (no remaining `## In Progress` or `## Pending` entries).
-2. **Collect BACKLOG CANDIDATE items** from all coder Concerns sections. If any found, offer to create backlog items: "Found {N} backlog candidates during build. Run `/rnd:backlog add` to create items, or I can create them now."
+2. **Collect BACKLOG CANDIDATE items** from all coder Advisories sections. If any found, offer to create backlog items: "Found {N} backlog candidates during build. Run `/rnd:backlog add` to create items, or I can create them now."
 3. **Recommend**: "Build complete. Run `/rnd:c-verify` for full code validation."
 
 ## Persistence
 
 Update `.rnd/state.md`:
-- Add entry to Recent Activity: `{today's date}: Built {phase} via /rnd:c-build — {N} plans, {M} waves, status: {DONE|DONE_WITH_CONCERNS}`
+- Add entry to Recent Activity: `{today's date}: Built {phase} via /rnd:c-build — {N} plans, {M} waves, status: {DONE|DONE_WITH_ADVISORIES}`
 - Follow compression protocol: keep under 120 lines, compress oldest Recent Activity entries into History phase summaries when exceeding 15 entries. Never delete entries.

@@ -5,7 +5,7 @@ Standardized status report format for all code agents. Every agent that produces
 ## Status Report Template
 
 ```markdown
-## Status: [DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT]
+## Status: [DONE | DONE_WITH_ADVISORIES | BLOCKED | NEEDS_CONTEXT]
 
 ## Tasks Completed
 - [x] Task 1: {description} — completed
@@ -28,7 +28,7 @@ Standardized status report format for all code agents. Every agent that produces
 - Integration tests: pass (4 passed, 0 failed)
 - Type check: pass
 
-## Concerns
+## Advisories
 - src/auth/token.ts:45 — Token refresh doesn't handle concurrent requests; race condition possible under load (BACKLOG CANDIDATE: PERF, medium)
 - src/api/client.ts:23 — Error messages expose internal paths in development mode (BACKLOG CANDIDATE: SEC, low)
 
@@ -60,8 +60,8 @@ Commit types:
 ### Test Results
 Results of all test suites run. Include pass/fail counts. If tests weren't run (no test infrastructure, no relevant tests), state why.
 
-### Concerns
-Issues discovered during execution that are outside the current task scope. Each concern must include:
+### Advisories
+Issues discovered during execution that are outside the current task scope. Advisories do NOT block — they are reported for triage and routed to the backlog. Each advisory must include:
 - File path and line number
 - Description of the issue
 - `BACKLOG CANDIDATE` tag with suggested category and priority (if applicable)
@@ -73,6 +73,9 @@ This section reinforces the core discipline: **every claim in the report must ci
 
 ```markdown
 ## Verdict: [PASS | CONDITIONAL | FAIL]
+# PASS = no findings of any kind
+# CONDITIONAL = advisories only, no blockers — does NOT trigger fix-up
+# FAIL = blockers present — gates fix-up
 
 ## Summary
 {2-3 sentence overview of findings}
@@ -80,11 +83,8 @@ This section reinforces the core discipline: **every claim in the report must ci
 ## Blockers
 - [severity] src/path/file.ts:line — What -> Why -> Suggestion
 
-## Suggestions
-- [severity] src/path/file.ts:line — What -> Why -> Suggestion
-
-## Nits
-- [severity] src/path/file.ts:line — What -> Why -> Suggestion
+## Advisories
+- [severity] src/path/file.ts:line — What -> Why -> Suggestion (BACKLOG CANDIDATE: {CAT}, {priority})
 
 ## Integration Map (rnd-code-reviewer only)
 | Requirement | Integration Path | Status | Issue |
@@ -92,12 +92,11 @@ This section reinforces the core discipline: **every claim in the report must ci
 | REQ-AUTH-01 | LoginForm -> /api/auth -> handler | WIRED | — |
 | REQ-API-03 | UserList -> /api/users | PARTIALLY_WIRED | Missing pagination |
 
-## Backlog Candidates
-- {CATEGORY}-{priority}: src/path/file.ts:line — {description}
-
 ## Evidence
 Every finding cites file:line. No assertions without proof.
 ```
+
+**Routing:** Blockers gate fix-up. Advisories route to backlog directly. The `BACKLOG CANDIDATE` tag in an advisory provides the category and priority for the backlog item.
 
 ## Rules
 

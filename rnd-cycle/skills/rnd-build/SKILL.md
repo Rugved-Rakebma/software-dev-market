@@ -6,7 +6,29 @@ user-invocable: false
 
 # R&D Build
 
-The rnd-build skill is the consolidated knowledge base that powers the build pipeline. It contains reference documents covering specification, planning, execution, orchestration, testing, and agent coordination — plus templates for plan and summary files. Used by `rnd-planner` (planning) and `rnd-coder` (execution).
+The rnd-build skill is the consolidated knowledge base for the build pipeline. It contains reference documents covering specification, planning, execution, orchestration, testing, and agent coordination — plus templates for plan and summary files. Used by `rnd-planner` (planning) and `rnd-coder` (execution).
+
+## Plan = Task / Arch = Shape / Spec = Reqs
+
+Three artifacts, three roles. The build pipeline depends on this separation:
+
+- **Plan** (`.rnd/build/plans/`) — the *task*: what to build, what files to touch, how to verify it's done
+- **Arch** (`.rnd/architecture/current.md`) — the *shape*: contracts, mechanisms, data flow
+- **Spec** (`.rnd/spec/spec.md`) — the *requirements*: REQ-IDs and acceptance criteria
+
+The coder receives all three in its priming prompt. Plans do not re-embed contracts or requirements — they point at them.
+
+## When to Use This Skill
+
+Match references to scope:
+
+| Scope | Use these references |
+|---|---|
+| **Small** refactor (<1KLOC, single dev, 1–2 components) | `planning-methodology`, `escalation-protocol`, `reporting-format` only |
+| **Standard** feature add (1–10KLOC) | Above + `handoff-contracts`, `execution-methodology`, `wave-orchestration` |
+| **Large** / greenfield / multi-team | All references as relevant |
+
+`spec-methodology` and `test-methodology` load only when their commands fire (`/rnd:spec` and verification respectively).
 
 ## Reference Documents
 
@@ -26,13 +48,14 @@ Includes:
 **Use when**: Breaking project phases into executable build plans.
 
 Includes:
-- Plans-are-prompts principle (plans are consumed by rnd-coder agents, not humans)
-- Task breakdown rules (Files/Action/Verify/Done, 2-3 tasks per plan)
-- Scope estimation (~50% context window target, quality degradation curve)
-- Dependency graph construction (productions, consumptions, edges)
-- Wave assignment algorithm (independent plans parallel, dependent sequential)
-- Vertical slices vs horizontal layers (prefer vertical)
-- Interface-first ordering (contracts before implementations)
+- Plans-are-prompts principle (consumed by rnd-coder agents, not humans)
+- Plan = Task / Arch = Shape / Spec = Reqs separation
+- No-code-in-plans rule (with ❌/✅ contrast example)
+- Plan anatomy (5 flat frontmatter fields + Goal / Wires to / Tasks)
+- Task anatomy: `Build:` + `Done:` only (2-3 tasks per plan)
+- Scope estimation (~50% context window target)
+- Dependency graph construction + wave assignment
+- Vertical slices over horizontal layers
 - File ownership rules (no two same-wave plans modify the same file)
 
 ### 3. Execution Methodology (`reference/execution-methodology.md`)
@@ -80,8 +103,9 @@ Includes:
 **Use when**: Deciding whether to continue, stop, or escalate during build execution.
 
 Includes:
-- Status definitions: DONE, DONE_WITH_CONCERNS, BLOCKED, NEEDS_CONTEXT
-- Retry limits (max 2 re-attempts per review gate failure)
+- Status definitions: DONE, DONE_WITH_ADVISORIES, BLOCKED, NEEDS_CONTEXT
+- BLOCKER vs ADVISORY routing (blockers gate fix-up; advisories route to backlog)
+- Retry limits (max 2 re-attempts on blockers; advisories never trigger retry)
 - Escalation triggers (architectural decisions, code beyond context, uncertainty about correctness)
 
 ### 8. Reporting Format (`reference/reporting-format.md`)
@@ -90,7 +114,7 @@ Includes:
 Includes:
 - Standardized status report template for all code agents
 - Evidence requirements (file:line citations for every claim)
-- Tasks completed, files changed, commits, test results, concerns sections
+- Tasks completed, files changed, commits, test results, advisories sections
 
 ## Templates
 
@@ -128,7 +152,7 @@ Includes:
 | Status | Meaning | Action |
 |--------|---------|--------|
 | **DONE** | All tasks implemented, tests pass | Continue to next plan/wave |
-| **DONE_WITH_CONCERNS** | Completed but doubts about correctness | Review concerns, decide if blocking |
+| **DONE_WITH_ADVISORIES** | Completed; advisories surfaced (not blocking) | Continue; advisories route to backlog |
 | **BLOCKED** | Cannot proceed | Surface to user, pause |
 | **NEEDS_CONTEXT** | Missing information, risks quality | Surface to user, decide if blocking |
 
@@ -160,19 +184,25 @@ Idea / Problem
 [spec-methodology] -> Frame problem, extract requirements
     |
     v
-Structured spec with REQ IDs (.rnd/spec/spec.md)
+Spec with REQ IDs (.rnd/spec/spec.md)
     |
     v
-[planning-methodology] -> Break phase into plans
+Arch with contracts (.rnd/architecture/current.md)  — produced by /rnd:design
     |
     v
-[plan-verification] -> rnd-critic validates 7 dimensions (in rnd-critic skill)
+[planning-methodology] -> Break phase into slim plans (point at arch + spec, no code)
+    |
+    v
+Assess scope from arch header (small / standard / large)
+    +-- Small    -> skip critic; proceed to execution
+    +-- Standard -> plan-verification critic with 1-loop budget on BLOCKERs only
+    +-- Large    -> plan-verification critic; /rnd:validate available for heavier review
     |
     v
 [wave-orchestration] -> Group plans into parallel waves
     |
     v
-[execution-methodology] -> rnd-coder implements each plan
+[execution-methodology] -> rnd-coder implements (receives plan + arch slice + spec slice)
     |
     v
 [test-methodology] -> Requirement-driven test generation

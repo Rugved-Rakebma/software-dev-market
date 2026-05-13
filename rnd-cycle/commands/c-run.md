@@ -140,13 +140,11 @@ For each plan in the wave:
 **Spawn rnd-coder via the Agent tool:**
 - **description**: "Build: {plan name}"
 - **model**: opus
-- **prompt**: Include:
-  - Full plan text inline (the coder NEVER reads plan files — see `rnd-build/reference/handoff-contracts.md`)
-  - Project context from `.rnd/state.md`
-  - Prior wave summaries
-  - Relevant spec requirements from `.rnd/spec/spec.md`
-  - Architecture constraints from `.rnd/architecture/current.md`
-  - Reference to `rnd-build/reference/execution-methodology.md` and `rnd-build/reference/escalation-protocol.md`
+- **prompt**: Include three inline blocks per `rnd-build/reference/handoff-contracts.md`:
+  - **`plan_text`** — full plan inline (coder NEVER reads plan files)
+  - **`arch_slices`** — sections of `.rnd/architecture/current.md` referenced by the plan's `## Wires to` section (parse the bullets, fetch those sections). Fallback: full arch if Wires to absent.
+  - **`spec_req_rows`** — rows from `.rnd/spec/spec.md` for the REQ-IDs in the plan's `requirements` frontmatter.
+  - Plus: project context from `.rnd/state.md`, prior wave summaries, references to `rnd-build/reference/execution-methodology.md` and `rnd-build/reference/escalation-protocol.md`.
 
 The coder runs in worktree isolation (declared in `agents/rnd-coder.md`); the spawn returns the worktree path and branch.
 
@@ -155,7 +153,7 @@ The coder runs in worktree isolation (declared in `agents/rnd-coder.md`); the sp
 - **prompt**: Target the files changed by the coder (from coder's report)
 
 Per `reference/decision-policy.md`:
-- `DONE` / `DONE_WITH_CONCERNS` → continue, queue concerns for Stage 8 backlog
+- `DONE` / `DONE_WITH_ADVISORIES` → continue, queue advisories for Stage 8 backlog
 - `BLOCKED` / `NEEDS_CONTEXT` → PAUSE
 
 #### Stage 3 — Merge worktrees (sequential)
@@ -181,20 +179,23 @@ All three receive the files-changed list from Stage 2 + Stage 3 (effectively `gi
 
 Aggregate the three reports per `reference/decision-policy.md`:
 
-1. Compute run verdict from the verdict-aggregation table.
-2. For each finding, categorize: blocker / clear-fix suggestion / judgment-call suggestion / nit.
+1. Compute run verdict from the verdict-aggregation table (PASS / CONDITIONAL / FAIL).
+2. For each finding, tag BLOCKER or ADVISORY (verifier already split these).
 3. Record decisions as sub-lines under leaf 5.3.
-4. If any judgment-call suggestion → PAUSE.
-5. If any blockers or clear-fix suggestions → expand Stage 6 with leaves per cluster.
-6. If no fix-up needed → mark Stage 6 + 7 skipped (`[x]` with note "skipped — all PASS").
+4. **ADVISORY findings** → route to Stage 8 backlog. Never trigger Stage 6.
+5. **BLOCKER findings (mechanical)** → expand Stage 6 with leaves per cluster.
+6. **BLOCKER findings (judgment-call: multi-approach or scope expansion)** → PAUSE for user.
+7. If run verdict is PASS or CONDITIONAL → mark Stage 6 + 7 skipped (`[x]` with note "skipped — no blockers"). CONDITIONAL means advisories present but no blockers; advisories still route to Stage 8 backlog.
 
-#### Stage 6 — Fix-up (CONDITIONAL, ADAPTIVE)
+#### Stage 6 — Fix-up (CONDITIONAL on FAIL verdict, ADAPTIVE)
 
-Cluster findings by file proximity (findings touching the same file or adjacent files = one cluster, one fix coder).
+Stage 6 runs ONLY on FAIL verdict (blockers present). On CONDITIONAL (advisories only), this stage is skipped — advisories already routed to Stage 8 backlog in triage.
+
+Cluster blockers by file proximity (findings touching the same file or adjacent files = one cluster, one fix coder).
 
 For each cluster:
-- Spawn `rnd-coder` per the Stage 2 pattern, prompt scoped to the cluster's findings.
-- Worktree: `fix/run-{run-id}-block-{N}` for blockers, `fix/run-{run-id}-sugg-{N}` for suggestions.
+- Spawn `rnd-coder` per the Stage 2 pattern (plan + arch slice + spec slice bundle), prompt scoped to the cluster's blockers.
+- Worktree: `fix/run-{run-id}-block-{N}`.
 - Same status routing as Stage 2.
 
 After all fix coders complete:
@@ -208,8 +209,8 @@ Spawn `rnd-code-spec-checker` and `rnd-code-reviewer` (skip analyst — re-runni
 
 Gate per `reference/decision-policy.md`:
 - PASS → Stage 8.
-- CONDITIONAL with no remaining blockers → Stage 8 (residual suggestions become backlog).
-- FAIL + `fix_loop_count < fix_loop_max` → loop back to Stage 5.
+- CONDITIONAL (advisories only, no remaining blockers) → Stage 8 (advisories become backlog).
+- FAIL + `fix_loop_count < fix_loop_max` → loop back to Stage 5 (re-triage blockers, then Stage 6 again).
 - FAIL + `fix_loop_count >= fix_loop_max` → PAUSE.
 
 #### Stage 8 — Finalize (sequential)

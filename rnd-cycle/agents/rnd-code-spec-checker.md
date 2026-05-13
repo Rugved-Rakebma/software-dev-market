@@ -66,31 +66,40 @@ Look for three categories:
 
 **PASS**: Every requirement verified in code with file:line evidence. No missing, extra, or misunderstood requirements.
 
-**FAIL**: One or more requirements not properly implemented. Report includes:
+**FAIL**: One or more requirements not properly implemented — **BLOCKER findings present**. Report includes:
 - Which requirements failed
 - Why they failed (missing, incorrect, incomplete)
 - File:line evidence for each finding
 - Specific fix suggestions
 
+FAIL is only when BLOCKER findings exist. Findings tagged ADVISORY (partial-met optimizations, adjacent edge cases) do not flip the verdict to FAIL — they appear in the report and route to backlog.
+
 ## Finding Format
 
-Every finding must include:
+Every finding must include a `routing` tag (BLOCKER or ADVISORY):
 ```
 - REQ-ID: REQ-AUTH-01
   File: src/auth/login.ts
   Line: 45
   Issue: Login handler returns 200 on invalid credentials instead of 401
-  Severity: blocker
+  routing: BLOCKER       # gates fix-up; missing/broken/wrong-behavior REQ
   Evidence: Line 45 reads `return res.json({ success: false })` — returns 200 status
   Fix: Change to `return res.status(401).json({ error: "Invalid credentials" })`
 ```
 
+```
+- REQ-ID: REQ-AUTH-01
+  File: src/auth/login.ts
+  Line: 67
+  Issue: Login does not lock account after 5 failed attempts (spec optimization, not core REQ)
+  routing: ADVISORY      # backlog; partial-met optimization, not gating
+  Evidence: No counter, no lock check
+  Fix: (BACKLOG CANDIDATE: SEC, medium) — add rate limiter / lockout
+```
+
 ## Backlog Discipline
 
-Not every finding is a blocker. For non-critical issues:
-- Edge cases not covered by spec that aren't blockers → mark `BACKLOG CANDIDATE`
-- Include category and suggested priority
-- These go into the backlog, not the fail list
+ADVISORY findings include a `BACKLOG CANDIDATE` tag with category (BUG/DEBT/UX/PERF/SEC/FEAT) and priority. They go into the backlog in Stage 8, not into the fail list.
 
 ## Evidence Rules
 

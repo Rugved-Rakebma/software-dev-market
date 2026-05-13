@@ -1,5 +1,5 @@
 ---
-description: Decompose architecture into executable build plans with wave assignments
+description: Decompose architecture into slim executable build plans with wave assignments
 argument-hint: [optional: specific phase to plan]
 ---
 
@@ -12,13 +12,27 @@ argument-hint: [optional: specific phase to plan]
 
 ## Context Loading
 
-Read and prepare full context for the planner:
+Read full context for the planner:
 - `.rnd/spec/spec.md` — all requirements with REQ-IDs
-- `.rnd/architecture/current.md` — architecture design
+- `.rnd/architecture/current.md` — architecture (note the scope assessment in the header)
 - `.rnd/decisions/` — locked decisions (constraints)
 - `.rnd/audit/` — audit findings (if exists)
 
 If `$ARGUMENTS` specifies a phase, scope planning to that phase only.
+
+## Scope Gate (mandatory)
+
+Read the scope assessment from the top of `.rnd/architecture/current.md` (small / standard / large). If absent, default to **standard** and print a one-line warning.
+
+The scope controls critic policy:
+
+| Scope | Critic | Loop budget |
+|---|---|---|
+| **Small** (single dev, <1KLOC, 1–2 components) | **Skip** | — |
+| **Standard** (2–5 devs, 1–10KLOC) | Compact `plan-verification.md` only | Max 1 revision loop on BLOCKERs |
+| **Large** (multi-team, >10KLOC, greenfield) | Compact `plan-verification.md` only | Max 1 revision loop on BLOCKERs |
+
+For heavier adversarial review at any scope, the user can run `/rnd:validate` explicitly — that's where the full critic skill loads.
 
 ## Phase 1 — Plan Decomposition
 
@@ -27,12 +41,12 @@ Spawn **rnd-planner** via the Agent tool:
 - **model**: opus
 - **prompt**: Include:
   - Full spec content (inline)
-  - Full architecture content (inline)
+  - Full architecture content (inline) including the scope assessment
   - All locked decisions (inline)
   - Audit findings if they exist (inline)
-  - Instruction to produce `.rnd/build/plans/phase-NN/NN-PLAN.md` files
-  - Reference to `skills/rnd-build/reference/planning-methodology.md` for plan structure
-  - Reminder: plans are prompts for rnd-coder agents, not documentation for humans
+  - Instruction to produce `.rnd/build/plans/phase-NN/NN-PLAN.md` files using the slim template at `skills/rnd-build/templates/plan-template.md`
+  - Reminder: plans are reference-rich prompts (point at arch + spec, never restate); no code, no signatures
+  - Plans separate the *task* (plan) from the *shape* (arch) from the *requirements* (spec) — the coder receives all three at build time
 
 When the planner returns, present the plan overview to the user:
 - Number of phases
@@ -41,7 +55,11 @@ When the planner returns, present the plan overview to the user:
 - Requirements coverage (which REQ-IDs are covered by which plans)
 - Estimated scope
 
-## Phase 2 — Plan Validation (max 3 loops)
+## Phase 2 — Plan Validation (skip for small scope)
+
+**Small scope:** skip this phase entirely. Tell the user "Plans saved. Run `/rnd:validate` if you want adversarial review before `/rnd:c-build`."
+
+**Standard / large scope:**
 
 Spawn **rnd-critic** via the Agent tool:
 - **description**: "Validate build plans"
@@ -49,23 +67,25 @@ Spawn **rnd-critic** via the Agent tool:
 - **prompt**: Include:
   - All plan files produced by the planner (inline)
   - Spec requirements for coverage checking
-  - Reference to `skills/rnd-critic/reference/plan-verification.md` for the 7 verification dimensions
-  - Instruction to return APPROVED or NEEDS REVISION with specific issues
+  - Reference to `skills/rnd-critic/reference/plan-verification.md` (and ONLY that reference — do not load the heavy adversarial set)
+  - Instruction to classify each issue as BLOCKER or ADVISORY and return one of `APPROVED` / `APPROVED_WITH_ADVISORIES` / `NEEDS_REVISION`
 
-**Validation loop:**
-1. If critic returns **APPROVED** → done, plans are ready
-2. If critic returns **NEEDS REVISION** → re-spawn `rnd-planner` with the critic's feedback, then re-spawn `rnd-critic` to recheck
-3. Maximum 3 loops. After 3 revisions with remaining issues, present the issues to the user for manual resolution
+**Validation loop (max 1 iteration):**
+1. If critic returns **APPROVED** or **APPROVED_WITH_ADVISORIES** → done; surface any advisories to the user
+2. If critic returns **NEEDS_REVISION** (blockers present) → re-spawn `rnd-planner` with the critic's blocker list, then re-spawn `rnd-critic` to recheck
+3. After 1 revision, if still NEEDS_REVISION → present remaining blockers to the user for manual resolution
+
+Advisories never trigger a revision loop. Only blockers do.
 
 ## After Completion
 
 Tell the user:
 - Plans are ready at `.rnd/build/plans/`
-- Next step: `/rnd:c-build` to execute the plans as code
-- Optional: `/rnd:validate` for additional stress-testing of the plans
+- Next step: `/rnd:c-build` to execute the plans as code (or `/rnd:c-run` for end-to-end with verify + triage)
+- Optional: `/rnd:validate` for the heavy adversarial pass (loads the full critic skill: assumption-challenging + antipattern-detection + plan-verification + validation-reports)
 
 ## Persistence
 
 Update `.rnd/state.md`:
-- Add entry to Recent Activity: `{today's date}: Build plans created via /rnd:plan → .rnd/build/plans/ ({N} plans, {M} waves)`
+- Add entry to Recent Activity: `{today's date}: Build plans created via /rnd:plan → .rnd/build/plans/ ({N} plans, {M} waves, scope: {small|standard|large})`
 - Follow compression protocol: keep under 120 lines, compress oldest Recent Activity entries into History phase summaries when exceeding 15 entries. Never delete entries.

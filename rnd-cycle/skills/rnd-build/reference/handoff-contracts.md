@@ -6,23 +6,27 @@ Defines the input/output contract for every agent-to-agent handoff in the build 
 
 ### MAIN SESSION -> rnd-coder
 
-**Input:**
+**Input:** The coder receives three blocks inline in its spawn prompt. The coder NEVER reads `.rnd/` files directly.
+
 ```yaml
-plan_file_content: |
-  Full plan text provided inline in the spawn prompt.
-  The coder NEVER reads plan files itself — it receives
-  the complete plan as part of its prompt.
+plan_text: |
+  Full plan text — the *task* (Goal / Wires to / Tasks with Build + Done per task).
+arch_slices: |
+  Sections of .rnd/architecture/current.md referenced by the plan's "Wires to" section.
+  Carries the *shape*: contracts, mechanisms, data flow, component boundaries.
+  If plan has no "Wires to" section, falls back to full arch.
+spec_req_rows: |
+  Spec rows for the REQ-IDs listed in the plan's `requirements` frontmatter field.
+  Carries the *requirements*: REQ descriptions and acceptance criteria from .rnd/spec/spec.md.
 project_context: |
-  Relevant project state: spec requirements being implemented,
-  architecture constraints, locked decisions.
+  Project state from .rnd/state.md and locked decisions from .rnd/decisions/.
 prior_wave_summaries: |
-  Status reports from previously completed waves, so the coder
-  knows what has been built and can reference those artifacts.
+  Status reports from previously completed waves.
 ```
 
 **Output:**
 ```yaml
-status: DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+status: DONE | DONE_WITH_ADVISORIES | BLOCKED | NEEDS_CONTEXT
 tasks_completed:
   - task_name: "description"
     status: completed | partial | skipped
@@ -33,8 +37,8 @@ files_changed:
 commits:
   - hash: "abc1234"
     message: "feat(01-02): implement user auth flow"
-concerns:
-  - "src/auth/token.ts:45 — token refresh not handling 401 edge case (BACKLOG CANDIDATE)"
+advisories:
+  - "src/auth/token.ts:45 — token refresh not handling 401 edge case (BACKLOG CANDIDATE: BUG, medium)"
 ```
 
 ### MAIN SESSION -> code-simplifier
@@ -102,16 +106,19 @@ architecture_context: |
 **Output:**
 ```yaml
 verdict: PASS | CONDITIONAL | FAIL
+# PASS = no findings of any kind
+# CONDITIONAL = advisories only, no blockers — does NOT trigger fix-up
+# FAIL = blockers present — gates fix-up
 blockers:
   - file: "src/api/client.ts"
     line: 23
     issue: "SQL injection via string concatenation in query builder"
     severity: blocker
-suggestions:
+advisories:
   - file: "src/components/Dashboard.tsx"
     line: 67
-    issue: "Missing loading state — should show skeleton while fetching (BACKLOG CANDIDATE)"
-    severity: suggestion
+    issue: "Missing loading state — should show skeleton while fetching (BACKLOG CANDIDATE: UX, low)"
+    severity: advisory
 integration_map:
   - requirement: "REQ-AUTH-01"
     path: "LoginForm -> /api/auth/login -> authHandler -> userService"
@@ -157,5 +164,6 @@ summary: |
 1. **Inputs are provided by the main session.** Agents do not read `.rnd/` files directly unless explicitly told to in their spawn prompt.
 2. **Outputs follow the standardized reporting format** from `reference/reporting-format.md`.
 3. **Every finding must cite file:line.** No assertions without proof.
-4. **BACKLOG CANDIDATE items** are clearly marked in the concerns/findings sections for the main session to collect.
+4. **BACKLOG CANDIDATE items** are clearly marked in the advisories/findings sections for the main session to collect.
 5. **Status values are from the escalation protocol** — see `reference/escalation-protocol.md`.
+6. **BLOCKER vs ADVISORY routing** — blockers gate fix-up loops; advisories route to backlog. Verifier verdicts: `FAIL` = blockers present, `CONDITIONAL` = advisories only, `PASS` = clean.

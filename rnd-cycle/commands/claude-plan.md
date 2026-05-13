@@ -12,10 +12,10 @@ argument-hint: [optional: specific phase or scope to plan]
 
 ## When to Use This vs `/rnd:plan`
 
-- **`/rnd:plan`** — greenfield projects, no existing code to explore, planning purely from spec + architecture
-- **`/rnd:claude-plan`** — existing codebases, need to understand current code structure before planning, want Claude's native planning intelligence to explore the actual codebase
+- **`/rnd:plan`** — planning purely from spec + architecture (no need to explore the codebase)
+- **`/rnd:claude-plan`** — existing codebases where you need Claude's native planning intelligence to explore current code structure before decomposing
 
-Both produce the same output format: `.rnd/build/plans/` files for `rnd-coder`.
+Both produce the same output format: slim plan files at `.rnd/build/plans/`. Both observe the same scope gate.
 
 ## Step 1 — Native Plan Mode (Interactive)
 
@@ -31,7 +31,18 @@ The user reviews, refines, and approves the plan interactively.
 
 On approval, save the comprehensive plan to `.rnd/build/master-plan.md` as the reference artifact.
 
-## Step 2 — Decomposition (Batch)
+## Step 2 — Scope Gate
+
+Read the scope assessment from the top of `.rnd/architecture/current.md` (small / standard / large). If absent, default to **standard** and print a one-line warning.
+
+Apply the same critic policy as `/rnd:plan`:
+
+| Scope | Critic | Loop budget |
+|---|---|---|
+| **Small** | Skip | — |
+| **Standard / large** | Compact `plan-verification.md` only | Max 1 revision loop on BLOCKERs |
+
+## Step 3 — Decomposition (Batch)
 
 Spawn **rnd-planner** via the Agent tool:
 - **description**: "Decompose master plan into structured build plans"
@@ -39,32 +50,30 @@ Spawn **rnd-planner** via the Agent tool:
 - **prompt**: Include:
   - Full `master-plan.md` content (inline) — this is the primary input
   - Spec requirements (inline) — for REQ-ID mapping
-  - Architecture constraints (inline)
+  - Architecture constraints (inline) including the scope assessment
   - Locked decisions (inline)
   - Instruction: mechanical decomposition, not creative planning. The creative planning already happened in Step 1.
-  - Produce `.rnd/build/plans/phase-NN/NN-PLAN.md` files with YAML frontmatter, wave assignments, dependencies, file ownership
+  - Produce slim plan files per `skills/rnd-build/templates/plan-template.md` (5-field frontmatter + Goal / Wires to / Tasks with Build + Done) — no code, no signatures, reference-rich
 
-## Step 3 — Validation (Batch)
+## Step 4 — Validation (skip for small scope)
 
-Spawn **rnd-critic** via the Agent tool:
-- **description**: "Validate decomposed build plans"
-- **model**: opus
-- **prompt**: Include all plan files + spec requirements + the 7 verification dimensions reference
+**Small scope:** skip validation.
 
-Validation loop (max 3 iterations):
-1. If **APPROVED** → done
-2. If **NEEDS REVISION** → re-spawn planner with feedback → re-validate
-3. After 3 loops → escalate remaining issues to user
+**Standard / large scope:** spawn **rnd-critic** via the Agent tool with the compact `plan-verification.md` only. Max 1 revision loop on BLOCKERs:
+1. **APPROVED** or **APPROVED_WITH_ADVISORIES** → done
+2. **NEEDS_REVISION** → re-spawn planner with blocker list → re-validate
+3. After 1 loop → escalate remaining blockers to user
 
 ## After Completion
 
 Tell the user:
 - Master plan preserved at `.rnd/build/master-plan.md`
 - Structured plans at `.rnd/build/plans/`
-- Next step: `/rnd:c-build` to execute
+- Next step: `/rnd:c-build` (or `/rnd:c-run` for end-to-end)
+- Optional: `/rnd:validate` for the heavy adversarial pass
 
 ## Persistence
 
 Update `.rnd/state.md`:
-- Add entry to Recent Activity: `{today's date}: Build plans created via /rnd:claude-plan → .rnd/build/plans/ ({N} plans, {M} waves)`
+- Add entry to Recent Activity: `{today's date}: Build plans created via /rnd:claude-plan → .rnd/build/plans/ ({N} plans, {M} waves, scope: {small|standard|large})`
 - Follow compression protocol: keep under 120 lines, compress oldest Recent Activity entries into History phase summaries when exceeding 15 entries. Never delete entries.

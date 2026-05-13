@@ -1,6 +1,6 @@
 # Plan Verification
 
-Reference material for validating build plans before execution. Used by rnd-critic to check plan quality across 7 dimensions.
+Reference for validating build plans. Used by rnd-critic to check plan quality across 7 dimensions, classified as BLOCKER (gates revision) or ADVISORY (reported only).
 
 ## Verification Loop
 
@@ -10,192 +10,172 @@ rnd-planner produces plans
 rnd-critic checks 7 dimensions
         |
     Issues found?
-    +-- No  -> Plans approved, proceed to execution
-    +-- Yes -> rnd-planner revises
-                |
-              Recheck (max 3 loops)
-                |
-            Still issues?
-            +-- No  -> Approved
-            +-- Yes -> Escalate to user
+    +-- No blockers          -> APPROVED (with or without advisories)
+    +-- Blockers present     -> NEEDS_REVISION
+                                    |
+                                rnd-planner revises
+                                    |
+                                Recheck
+                                    |
+                                Still blockers?
+                                +-- Yes -> escalate to user
 ```
 
-Maximum 3 revision loops. If plans still have issues after 3 revisions, escalate to the user with a clear summary of remaining problems.
+**Loop budget by command:**
+- `/rnd:plan` — max **1** revision loop on blockers only (advisories never trigger revision)
+- `/rnd:validate` — max **3** revision loops (heavier adversarial pass)
+
+Advisories never gate. They are reported alongside the verdict for the user / planner to consider.
 
 ## 7 Verification Dimensions
 
-### Dimension 1: Requirement Coverage
+| # | Dimension | Severity | Gates? |
+|---|---|---|---|
+| 1 | Requirement Coverage | **BLOCKER** | Yes — every REQ must be claimed |
+| 2 | Task Completeness | **BLOCKER** | Yes — missing Build/Done breaks coder |
+| 3 | Dependency Correctness | **BLOCKER** | Yes — cycles break wave execution |
+| 4 | Scope Sanity | ADVISORY | No — plan executable but maybe oversized |
+| 5 | Verification Derivation | ADVISORY | No — Done can be tightened post-hoc |
+| 6 | Wires-to Completeness | ADVISORY | No — coder gets fallback (full arch) |
+| 7 | Context Compliance | **BLOCKER** | Yes — contradicting locked decisions invalidates the plan |
 
-Every REQ-ID from `.rnd/spec/spec.md` must appear in at least one plan's `requirements` field.
+### Dimension 1: Requirement Coverage [BLOCKER]
 
-**Check**: Extract all REQ-{CAT}-{NN} identifiers from the spec. For each, verify it appears in at least one plan's frontmatter `requirements` array.
+Every REQ-ID from `.rnd/spec/spec.md` must appear in at least one plan's `requirements` frontmatter field.
 
-**Issue format**:
+**Check:** Extract all REQ-{CAT}-{NN} from the spec. For each, verify it appears in ≥1 plan.
+
+**Issue format:**
 ```
 dimension: requirement-coverage
-severity: blocker
+severity: BLOCKER
 description: REQ-AUTH-03 (password reset flow) not covered by any plan
 fix_hint: Add a plan or extend an existing plan to cover password reset
 ```
 
-**Common failures**:
-- Non-functional requirements (performance, security) overlooked
-- Edge-case requirements lumped into "will handle later"
-- v2 requirements accidentally excluded from v1 plans
+### Dimension 2: Task Completeness [BLOCKER]
 
-### Dimension 2: Task Completeness
+Every task in every plan must have both `Build:` and `Done:`.
 
-Every task in every plan must have all four fields: Files, Action, Verify, Done.
+**Check:** Parse each plan's tasks. Verify both fields are present and non-empty. Verify Build does not contain code/signatures. Verify Done is binary-verifiable.
 
-**Check**: Parse each plan's tasks. Verify all four fields are present and non-empty.
-
-**Issue format**:
+**Issue format:**
 ```
 dimension: task-completeness
-severity: blocker
-description: Plan 03, Task 2 missing Verify field
-fix_hint: Add a verification command — e.g., "just typecheck" or "file exports expected function"
+severity: BLOCKER
+description: Plan 03, Task 2 missing Done field
+fix_hint: Add a binary verification — e.g., `just typecheck` exits 0
 ```
 
-**Common failures**:
-- Verify field says "manual check" (not automated)
-- Done field is vague ("works correctly" instead of binary criteria)
-- Files field uses wildcards instead of exact paths
+Common failures: Build contains pseudocode or signatures; Done says "works correctly" (vague); Files field uses wildcards.
 
-### Dimension 3: Dependency Correctness
+### Dimension 3: Dependency Correctness [BLOCKER]
 
-No circular dependencies. All `depends_on` references point to existing plan numbers.
+No circular dependencies. All `depends_on` references point to existing plan IDs.
 
-**Check**:
+**Check:**
 1. Build adjacency list from `depends_on` fields
 2. Run cycle detection (DFS with back-edge detection)
-3. Verify every referenced plan number exists
+3. Verify every referenced plan ID exists
 
-**Issue format**:
+**Issue format:**
 ```
 dimension: dependency-correctness
-severity: blocker
-description: Circular dependency: Plan 03 -> Plan 05 -> Plan 03
-fix_hint: Extract shared dependency into a new plan, or merge Plans 03 and 05
+severity: BLOCKER
+description: Circular dependency: 03-vault -> 05-prompts -> 03-vault
+fix_hint: Extract shared dep into a new plan, merge cyclic plans, or introduce an interface plan
 ```
 
-**Common failures**:
-- Implicit dependencies not declared (Plan B uses a type from Plan A but doesn't list A in depends_on)
-- Stale references to plans that were renumbered or removed
+### Dimension 4: Scope Sanity [ADVISORY]
 
-### Dimension 4: Key Links
+2-3 tasks per plan. Each task ~15-60 minutes.
 
-`must_haves.key_links` must specify wiring (from -> to -> via), not just isolated artifacts.
+**Check:** Count tasks per plan. Flag plans with 1 task (too granular) or 4+ tasks (too large).
 
-**Check**: Every plan with 2+ artifacts in `must_haves.artifacts` should have at least one `key_link` connecting them. Plans that produce both a service and a consumer must show how they connect.
-
-**Issue format**:
-```
-dimension: key-links
-severity: warning
-description: Plan 02 produces UserService and UserController but no key_link shows how controller uses service
-fix_hint: Add key_link — from: "src/controllers/user.ts", to: "src/services/user.ts", via: "constructor injection"
-```
-
-**Common failures**:
-- Plans produce files but don't specify how they connect
-- key_links only show import relationships, not actual usage
-- Cross-plan wiring assumed but not documented
-
-### Dimension 5: Scope Sanity
-
-2-3 tasks per plan. Each task estimated at 15-60 minutes.
-
-**Check**: Count tasks per plan. Flag plans with 1 task (too granular) or 4+ tasks (too large).
-
-**Issue format**:
+**Issue format:**
 ```
 dimension: scope-sanity
-severity: warning
+severity: ADVISORY
 description: Plan 04 has 5 tasks — likely exceeds ~50% context budget
 fix_hint: Split into Plan 04a (Tasks 1-3) and Plan 04b (Tasks 4-5)
 ```
 
-**Common failures**:
-- "Kitchen sink" plans that try to do everything for a feature
-- Single-task plans that waste context window overhead
-- Tasks estimated at >60 minutes that should be split
+### Dimension 5: Verification Derivation [ADVISORY]
 
-### Dimension 6: Verification Derivation
+Each `Done:` should trace to a spec REQ or arch acceptance criterion. Truths that can't trace are likely fabricated.
 
-`must_haves.truths` must trace directly to spec requirements or architecture goals.
+**Check:** For each task's Done, verify it maps to a specific REQ-ID or arch constraint.
 
-**Check**: For each truth in must_haves, verify it maps to a specific REQ-ID or architecture constraint. Truths that can't be traced are likely fabricated or aspirational.
-
-**Issue format**:
+**Issue format:**
 ```
 dimension: verification-derivation
-severity: warning
-description: Plan 01 truth "system handles 10K concurrent users" not traceable to any spec requirement
-fix_hint: Either add a performance requirement to the spec or remove this truth
+severity: ADVISORY
+description: Plan 01 Task 2 Done "system handles 10K concurrent users" not traceable to any spec requirement
+fix_hint: Either add a performance REQ to the spec or relax this Done
 ```
 
-**Common failures**:
-- Truths that are technically interesting but not required by the spec
-- Truths that are too vague to verify ("system is well-structured")
-- Truths that duplicate other plans' truths
+### Dimension 6: Wires-to Completeness [ADVISORY]
 
-### Dimension 7: Context Compliance
+If the plan references contracts that live in the arch doc, those arch sections should appear in the `## Wires to` section so c-build can bundle the right slices into the coder's prompt.
+
+**Check:** For each plan, scan task bodies for arch references ("arch §X", "per arch …"). Verify each appears in `## Wires to`.
+
+**Issue format:**
+```
+dimension: wires-to-completeness
+severity: ADVISORY
+description: Plan 02 Task 1 references "arch §5.1" but it's not in ## Wires to
+fix_hint: Add `arch §5.1 — retrieve_sources contract` to Wires to
+```
+
+### Dimension 7: Context Compliance [BLOCKER]
 
 Locked decisions from `.rnd/decisions/` are honored, not re-evaluated.
 
-**Check**: Read all files in `.rnd/decisions/`. For each locked decision, verify no plan contradicts it or re-evaluates the decision.
+**Check:** Read all files in `.rnd/decisions/`. For each locked decision, verify no plan contradicts it or re-evaluates the decision.
 
-**Issue format**:
+**Issue format:**
 ```
 dimension: context-compliance
-severity: blocker
-description: Plan 03 Task 1 says "evaluate PostgreSQL vs MongoDB" but DEC-002 locks PostgreSQL as the database
+severity: BLOCKER
+description: Plan 03 Task 1 says "evaluate PostgreSQL vs MongoDB" but DEC-002 locks PostgreSQL
 fix_hint: Remove the evaluation — use PostgreSQL as specified in DEC-002
 ```
 
-**Common failures**:
-- Plans that "explore alternatives" for already-decided technologies
-- Plans that introduce patterns contradicting architectural decisions
-- Plans that use different naming conventions than those locked in decisions
+## Verdict
 
-## Issue Severity Levels
+| Verdict | Condition |
+|---|---|
+| `APPROVED` | No blockers, no advisories |
+| `APPROVED_WITH_ADVISORIES` | No blockers, advisories present |
+| `NEEDS_REVISION` | One or more blockers present |
 
-| Severity | Meaning | Action |
-|---|---|---|
-| **blocker** | Plan cannot be executed as-is. Will produce incorrect or incomplete results. | Must fix before execution |
-| **warning** | Plan can be executed but quality or integration may suffer. | Should fix, can proceed with documented risk |
-| **info** | Observation or suggestion for improvement. | Optional improvement |
+Only `NEEDS_REVISION` triggers a revision loop. `APPROVED_WITH_ADVISORIES` proceeds — advisories are surfaced in the verdict report.
 
 ## Verification Report Format
 
 ```
 ## Plan Verification Report
 
+### Verdict: APPROVED | APPROVED_WITH_ADVISORIES | NEEDS_REVISION
+
 ### Summary
 - Plans checked: N
 - Blockers: N
-- Warnings: N
-- Info: N
-- Verdict: APPROVED / NEEDS REVISION
+- Advisories: N
 
-### Issues
+### Blockers
+[List all BLOCKER-severity issues, each with dimension/description/fix_hint]
 
-#### Blockers
-[List all blocker-severity issues]
-
-#### Warnings
-[List all warning-severity issues]
-
-#### Info
-[List all info-severity observations]
+### Advisories
+[List all ADVISORY-severity issues]
 
 ### Requirement Coverage Matrix
 | REQ-ID | Description | Covered By |
 |--------|-------------|------------|
-| REQ-AUTH-01 | User login | Plan 02 |
+| REQ-AUTH-01 | User login | 02-auth |
 | REQ-AUTH-02 | Password reset | (MISSING) |
 
 ### Dependency Graph
-[Text representation of plan dependency graph with wave assignments]
+[Text rep of plan dependency graph with wave assignments]
 ```

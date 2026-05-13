@@ -1,32 +1,32 @@
 ---
-phase: NN-name
-plan: NN
+id: NN-short-name
 wave: N
-depends_on: []
-files_modified: []
+depends_on: [NN-other-id]
+files: [src/path/to/file.ts, ...]
 requirements: [REQ-XXX-NN]
-must_haves:
-  truths:
-    - "Observable truth that must hold"
-  artifacts:
-    - path: "src/path/to/file"
-      provides: "What this artifact delivers"
-  key_links:
-    - from: "src/component.tsx"
-      to: "src/api/endpoint.ts"
-      via: "fetch call in useEffect"
 ---
 
-## Plan NN: [Plan Name]
+# Plan NN — Name
 
-### Task 1: [Task Name]
-- **Files:** `src/path/to/file.ts`
-- **Action:** [Specific implementation instructions]
-- **Verify:** [Command or check to verify task is done]
-- **Done:** [Acceptance criteria — binary testable]
+## Goal
 
-### Task 2: [Task Name]
-- **Files:** `src/path/to/file.ts`
-- **Action:** [Specific implementation instructions]
-- **Verify:** [Command or check to verify task is done]
-- **Done:** [Acceptance criteria — binary testable]
+One paragraph: what this plan delivers and why. Point at arch sections + spec REQs. Do not restate contracts, signatures, or code — arch carries the contract, spec carries the requirements.
+
+## Wires to
+
+- arch §<n> — <contract or data flow or module this plan touches>
+- spec REQ-<X>, REQ-<Y>
+
+## Tasks
+
+### Task 1 — Name
+
+**Build:** Describe behavior. No code, no signatures, no class bodies. Reference arch sections for shape (e.g. "per arch §5.1"). Reference spec REQs for acceptance.
+
+**Done:** Binary check. Often the verify command itself, e.g. `python -c "from agent_mani.vault import retrieve_sources"` exits 0.
+
+### Task 2 — Name
+
+**Build:** ...
+
+**Done:** ...

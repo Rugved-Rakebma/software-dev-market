@@ -28,10 +28,10 @@ Includes:
 **Use when**: Deciding whether to auto-address, auto-backlog, continue, or pause for the user. Covers Stage 5 triage and all pause triggers.
 
 Includes:
-- Coder status handling (`DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`)
+- Coder status handling (`DONE` / `DONE_WITH_ADVISORIES` / `BLOCKED` / `NEEDS_CONTEXT`)
 - Verifier verdict aggregation across the three different return shapes
-- Finding triage: blocker / clear-fix suggestion / judgment-call suggestion / nit
-- The "clear-fix vs judgment-call" decision rule
+- Finding triage: BLOCKER (mechanical) / BLOCKER (judgment-call) / ADVISORY
+- The "mechanical vs judgment-call" decision rule for blockers
 - Full pause-trigger list with pause format
 - Loop limits (`fix_loop_max: 2`)
 - Backlog routing rules
@@ -62,7 +62,7 @@ Includes:
 | Status | Action |
 |---|---|
 | `DONE` | Continue |
-| `DONE_WITH_CONCERNS` | Continue; queue concerns for backlog |
+| `DONE_WITH_ADVISORIES` | Continue; queue advisories for backlog |
 | `BLOCKED` | PAUSE → user |
 | `NEEDS_CONTEXT` | PAUSE → user |
 
@@ -78,10 +78,9 @@ Includes:
 ### Finding Triage
 | Category | Routing |
 |---|---|
-| Blocker | Auto-address (Stage 6) |
-| Clear-fix suggestion | Auto-address (Stage 6) |
-| Judgment-call suggestion | PAUSE → user |
-| Nit / out-of-scope | Auto-backlog (Stage 8) |
+| BLOCKER (mechanical) | Auto-address (Stage 6) |
+| BLOCKER (judgment-call: multi-approach or scope expansion) | PAUSE → user |
+| ADVISORY | Auto-backlog (Stage 8); never triggers fix-up |
 
 ### Standard Stage Skeleton
 | # | Stage | Type |

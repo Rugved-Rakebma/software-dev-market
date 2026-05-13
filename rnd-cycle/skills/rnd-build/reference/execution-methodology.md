@@ -10,25 +10,26 @@ Read `.rnd/state.md` to understand:
 - What's currently in progress
 - Any known issues or blockers from previous executions
 
-### Step 2: Load Plan
-Read the assigned plan file. Parse:
-- **Frontmatter**: phase, plan, wave, depends_on, files_modified, requirements, must_haves
-- **Tasks**: Each task's Files, Action, Verify, Done fields
-- **Context**: Any inline context about patterns, conventions, or constraints
+### Step 2: Load Plan + Arch + Spec
+The coder receives **three inline blocks** in its spawn prompt (per `handoff-contracts.md`):
+- **`plan_text`** — the task: 5-field frontmatter (`id`, `wave`, `depends_on`, `files`, `requirements`) + Goal / Wires to / Tasks (each task has Build + Done)
+- **`arch_slices`** — the shape: sections of `.rnd/architecture/current.md` referenced by the plan's "Wires to"
+- **`spec_req_rows`** — the requirements: rows from `.rnd/spec/spec.md` for the REQ-IDs in the plan's `requirements` frontmatter
 
-Read all files listed in `files_modified` to understand their current state before modifying them.
+**Backward compat:** if a plan uses the old shape (`phase`/`plan`/`files_modified`/`must_haves` frontmatter, `Files`/`Action`/`Verify`/`Done` per task), gracefully read it: treat `phase-plan` as the id, `files_modified` as `files`, ignore `must_haves`, and combine `Files`+`Action` as Build, `Verify`+`Done` as Done.
+
+Read all files listed in the plan's `files` field to understand their current state before modifying them.
 
 ### Step 3: Record Time
 Note the start time. This enables duration tracking in the summary metrics.
 
 ### Step 4: Execute Tasks
 For each task sequentially:
-1. Read the task's four fields (Files, Action, Verify, Done)
-2. Read any existing files that will be modified
-3. Implement the action as described
-4. Run the Verify check
-5. Confirm Done criteria is met
-6. Commit with conventional format
+1. Read the task's `Build:` and `Done:` fields (or the old 4-field shape if a legacy plan)
+2. Read any existing files that will be modified (from the plan's `files` field)
+3. Implement the behavior described in Build; follow contracts from the arch slices
+4. Confirm Done criteria is met (Done often IS a verify command)
+5. Commit with conventional format
 
 ### Step 5: Verify
 After all tasks complete, re-verify all Done criteria across all tasks. Run any project-level verification commands. This catches regressions where Task 3 broke something Task 1 built.

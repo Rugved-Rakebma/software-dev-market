@@ -103,16 +103,24 @@ STRIDE threat modeling + OWASP Top 10 scanning:
 - Note existence ONLY — never read contents
 
 **Severity ranking:**
-- **Critical**: Immediate exploitation risk (exposed secrets, SQL injection, auth bypass)
-- **High**: Significant risk (XSS, broken access control, missing encryption)
-- **Medium**: Should fix soon (missing rate limiting, verbose errors)
-- **Low**: Best practice improvements (missing security headers, audit logging gaps)
+- **Critical**: Immediate exploitation risk (exposed secrets, SQL injection, auth bypass) → routes as **BLOCKER**
+- **High**: Significant risk (XSS, broken access control, missing encryption) → routes as **BLOCKER**
+- **Medium**: Should fix soon (missing rate limiting, verbose errors) → routes as **ADVISORY**
+- **Low**: Best practice improvements (missing security headers, audit logging gaps) → routes as **ADVISORY**
+
+### BLOCKER vs ADVISORY routing
+
+Every finding carries one of two routing tags:
+- **BLOCKER** — wrong behavior, security issue, broken contract, broken integration. Gates Stage 6 fix-up.
+- **ADVISORY** — debt, polish, partial-met optimization, adjacent improvement. Routes to backlog directly.
+
+Critical and High severity findings route as BLOCKER. Medium and Low route as ADVISORY (with `BACKLOG CANDIDATE` tag).
 
 ### Mode 4: Code Review
 
 Line-by-line quality review combined with integration wiring verification. Same methodology as `rnd-code-reviewer` but triggered via `/rnd:audit` in code mode.
 
-**Severity tiers:** Blocker / Suggestion / Nit
+**Severity routing:** BLOCKER (must fix, gates build) / ADVISORY (backlog, never gates)
 **Integration checks:** Export/import maps, API consumers, auth protection, E2E flow tracing
 
 ## Backlog Discipline

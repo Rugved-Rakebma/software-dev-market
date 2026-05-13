@@ -55,40 +55,44 @@ Spawn **rnd-code-analyst** via the Agent tool:
 
 ## Aggregate Results
 
-After all 3 agents return, aggregate into a consolidated verification report:
+After all 3 agents return, aggregate into a consolidated verification report. Findings split into two buckets per the BLOCKER vs ADVISORY routing in `skills/rnd-build/reference/handoff-contracts.md`:
 
 ```markdown
 # Verification Report — {date}
 
 ## Verdicts
-| Agent | Verdict | Blockers | Suggestions |
-|-------|---------|----------|-------------|
+| Agent | Verdict | Blockers | Advisories |
+|-------|---------|----------|------------|
 | Spec Checker | PASS/FAIL | N | N |
 | Code Reviewer | PASS/CONDITIONAL/FAIL | N | N |
-| Code Analyst | {summary} | N | N |
+| Code Analyst | {summary} | N (high+critical) | N (medium+low) |
 
 ## Overall: PASS / CONDITIONAL / FAIL
+# PASS = no findings of any kind
+# CONDITIONAL = advisories only, no blockers
+# FAIL = blockers present
 
 ## Blockers (must fix)
-{aggregated blockers from all agents}
+{aggregated BLOCKER findings — gates fix-up in /rnd:c-run}
 
-## Suggestions (should fix)
-{aggregated suggestions}
-
-## Backlog Candidates
-{aggregated BACKLOG CANDIDATE items from all agents}
+## Advisories (route to backlog)
+{aggregated ADVISORY findings — these are the backlog candidates}
 ```
 
 Save to `.rnd/verifications/{date}-verification.md`.
 
 ## After Completion
 
-If any agent returns **FAIL**:
-- List specific issues that need fixing
+If overall verdict is **FAIL** (blockers present):
+- List specific blockers that need fixing
 - Suggest: "Fix the blockers, then run `/rnd:c-build` to rebuild affected plans, then `/rnd:c-verify` again."
 
-If all pass:
-- Congratulate: "All verification checks passed."
+If overall verdict is **CONDITIONAL** (advisories only):
+- Surface advisories — these route to backlog, not fix-up
+- Note: "No blockers found. Advisories are queued for backlog. You can proceed to next phase."
+
+If **PASS**:
+- "All verification checks passed."
 
 ## Backlog Collection
 

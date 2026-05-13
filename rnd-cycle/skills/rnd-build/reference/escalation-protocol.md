@@ -9,16 +9,16 @@ All tasks implemented, tests pass, commits created. The plan is fully executed w
 
 **When to use**: Every task in the plan has been implemented, every verification check passes, and you have no doubts about correctness.
 
-### DONE_WITH_CONCERNS
-Completed all tasks but the agent has doubts about correctness, performance, or approach. Lists specific concerns with file:line references.
+### DONE_WITH_ADVISORIES
+Completed all tasks. The agent surfaced advisories — observations, concerns, or BACKLOG CANDIDATE items found during execution. **Advisories do NOT block execution** — they are reported for triage and routed to the backlog by `/rnd:c-run` Stage 8.
 
-**When to use**: You finished the work, but something feels off. Maybe a pattern doesn't match the architecture, a test passes but seems fragile, or you made a judgment call you're not confident about.
+**When to use**: You finished the work, but you noticed things worth reporting — a pattern doesn't quite match the architecture, a test passes but seems fragile, adjacent code has debt, you made a judgment call worth surfacing.
 
-**What to include**: Specific concerns, each with:
+**What to include**: Specific advisories, each with:
 - File path and line number
-- What the concern is
+- What the advisory is
 - Why it matters
-- What you would check if you had more context
+- BACKLOG CANDIDATE tag with category and priority (if applicable)
 
 ### BLOCKED
 Cannot proceed. Missing dependency, architectural ambiguity, or failing precondition. Describes what's blocking and what was attempted.
@@ -48,9 +48,9 @@ Missing information that isn't a hard blocker but risks quality. Describes what 
 
 ## Retry Limits
 
-- **Max 2 re-attempts** per review gate failure
-- After a reviewer returns FAIL or CONDITIONAL, the coder gets the feedback and tries again
-- After 2 failed re-attempts, **escalate to user** with:
+- **Max 2 re-attempts** per review gate failure — but only on BLOCKERS (a `FAIL` verdict means blockers present)
+- `CONDITIONAL` verdict (advisories only, no blockers) does NOT trigger a retry — advisories route to backlog
+- After 2 failed re-attempts on blockers, **escalate to user** with:
   - The original plan
   - What was implemented
   - The reviewer's feedback (both rounds)
@@ -79,7 +79,7 @@ During execution, agents will discover issues outside their current task scope:
 - Missing edge case handling
 - Security concerns in existing code
 
-**Rule**: Do NOT fix these. Report them as `BACKLOG CANDIDATE` in the Concerns section of your status report. Include enough detail for a backlog item:
+**Rule**: Do NOT fix these. Report them as `BACKLOG CANDIDATE` in the Advisories section of your status report. Include enough detail for a backlog item:
 - Category suggestion (BUG/DEBT/UX/PERF/SEC/FEAT)
 - Priority suggestion (critical/high/medium/low)
 - File path and line number

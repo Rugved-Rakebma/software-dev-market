@@ -89,7 +89,7 @@ Optional 1-line description.
 ```markdown
 - [ ] N.M ▶ spawn rnd-coder (foreground): plan {name}
        worktree: feature/run-{run-id}-{plan-name}
-       expects: DONE | DONE_WITH_CONCERNS
+       expects: DONE | DONE_WITH_ADVISORIES
 
 - [ ] N.M update .rnd/build/progress.md (status: complete)
 ```
@@ -133,7 +133,7 @@ Each plan: spawn rnd-coder in worktree, then code-simplifier on its files (same 
        worktree: feature/run-{run-id}-04-02
 - [ ] 2.3 ▶ spawn rnd-coder + code-simplifier: plan {04-03}
        worktree: feature/run-{run-id}-04-03
-- gate: all coders return DONE | DONE_WITH_CONCERNS (no BLOCKED, no NEEDS_CONTEXT)
+- gate: all coders return DONE | DONE_WITH_ADVISORIES (no BLOCKED, no NEEDS_CONTEXT)
 
 ## Stage 3 — Merge worktrees (sequential, dependency order)
 - [ ] 3.1 git checkout main; verify clean
@@ -154,17 +154,17 @@ Scope: files touched in Stage 2.
 ## Stage 5 — Triage (in-session, ADAPTIVE)
 Aggregate the three return shapes (each agent returns differently — see decision-policy.md).
 - [ ] 5.1 collect verdicts and findings from all three agents
-- [ ] 5.2 categorize findings: blockers / clear-fix suggestions / judgment-call suggestions / nits
-- [ ] 5.3 record triage decision: which findings get auto-fix in Stage 6, which become backlog, which pause for user
-- gate: triage decision recorded; if any judgment-call suggestion or hit a pause trigger → PAUSE
+- [ ] 5.2 categorize findings: BLOCKER (mechanical) / BLOCKER (judgment-call) / ADVISORY
+- [ ] 5.3 record triage decision: mechanical blockers → Stage 6 auto-fix; advisories → Stage 8 backlog; judgment-call blockers → PAUSE for user
+- gate: triage decision recorded; if any judgment-call blocker or hit a pause trigger → PAUSE
 
 ## Stage 6 — Fix-up [CONDITIONAL — only if Stage 5 categorized any to-fix items, ADAPTIVE]
 Leaves filled at runtime based on Stage 5 categorization.
-- [ ] 6.1 ▶ spawn rnd-coder per blocker/suggestion cluster (worktree per cluster)
+- [ ] 6.1 ▶ spawn rnd-coder per blocker cluster (worktree per cluster)
 - [ ] 6.2 merge fix branches sequentially (no-ff)
 - [ ] 6.3 commit: "fix({scope}): address verify blockers"
 - [ ] 6.4 fix_loop_count++
-- gate: all fix coders DONE | DONE_WITH_CONCERNS, clean tree
+- gate: all fix coders DONE | DONE_WITH_ADVISORIES, clean tree
 
 ## Stage 7 — Re-verify [CONDITIONAL — only if Stage 6 ran]
 - [ ] 7.1 ▶ spawn rnd-code-spec-checker (scope: files from Stage 6)
@@ -177,7 +177,7 @@ Leaves filled at runtime based on Stage 5 categorization.
 - [ ] 8.1 update .rnd/build/progress.md: move plans built in this run from ## Pending/## In Progress into ## Completed (per-plan bullets); set frontmatter status: complete
 - [ ] 8.2 update .rnd/state.md Recent Activity (compression protocol — see commands/c-build.md)
 - [ ] 8.3 write .rnd/verifications/{scope}-{date}.md (consolidated verdict)
-- [ ] 8.4 scan ALL streams for BACKLOG CANDIDATE markers (coder concerns + verifier findings), create backlog items per commands/backlog.md format
+- [ ] 8.4 scan ALL streams for BACKLOG CANDIDATE markers (coder advisories + verifier advisories), create backlog items per commands/backlog.md format
 - [ ] 8.5 set this run.md frontmatter status: complete
 - gate: none, done
 ```

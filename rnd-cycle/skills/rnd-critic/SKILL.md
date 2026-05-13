@@ -6,7 +6,22 @@ user-invocable: false
 
 # R&D Critic
 
-The validation and strategic analysis knowledge base for the `rnd-critic` agent. This skill consolidates four complementary frameworks into a single reference for adversarial validation of plans, proposals, decisions, and roadmaps. Loaded by the main session during `/rnd:decide`, and by the `rnd-critic` agent during `/rnd:validate` and `/rnd:plan` validation loops.
+The validation and strategic analysis knowledge base for the `rnd-critic` agent. Four complementary frameworks for adversarial validation of plans, proposals, decisions, and roadmaps.
+
+## When to Use Which References
+
+The critic is invoked from multiple commands with different budgets. Load only what each command needs:
+
+| Caller | References to load | Loop budget | Purpose |
+|---|---|---|---|
+| `/rnd:plan` (standard/large scope) | `plan-verification.md` only | Max **1** revision loop on BLOCKERs only | Cheap pass — catch real plan bugs before build |
+| `/rnd:plan` (small scope) | (skip the critic entirely) | — | Small projects don't warrant the ceremony; user can run `/rnd:validate` manually |
+| `/rnd:validate` | All four references | Max **3** revision loops | Heavy adversarial pass — full 8-section validation report |
+| `/rnd:decide` | `assumption-challenging.md` + `antipattern-detection.md` | N/A (not a build plan) | Reason about decisions/tradeoffs |
+
+**Do not load `validation-reports.md` for `/rnd:plan`** — it's the heavy 8-section format used by `/rnd:validate`. `/rnd:plan` uses the compact verdict format defined in `plan-verification.md`.
+
+**Do not load `antipattern-detection.md` or `assumption-challenging.md` for `/rnd:plan`** — they're 800+ and 500+ lines respectively, written for strategic adversarial review, not lightweight plan checking.
 
 ## Reference Documents
 
@@ -46,34 +61,42 @@ The validation and strategic analysis knowledge base for the `rnd-critic` agent.
 
 ### 4. Plan Verification
 **File**: `reference/plan-verification.md`
-**Use when**: Validating build plan quality before execution during `/rnd:plan` validation loops.
+**Use when**: Validating build plan quality before execution during `/rnd:plan` (standard/large scope only).
 **Provides**:
-- 7 verification dimensions (requirement coverage, task completeness, dependency correctness, key links, scope sanity, verification derivation, context compliance)
-- Verification loop (planner produces -> critic checks -> planner revises, max 3 loops)
-- Issue format (dimension, severity, description, fix hint)
-- Verification report format with requirement coverage matrix
+- 7 verification dimensions classified as **BLOCKER** (gates revision) or **ADVISORY** (reported only)
+  - BLOCKER: requirement coverage, task completeness, dependency correctness, context compliance
+  - ADVISORY: scope sanity, verification derivation, wires-to completeness
+- Verdict triplet: `APPROVED` / `APPROVED_WITH_ADVISORIES` / `NEEDS_REVISION`
+- Only `NEEDS_REVISION` (blockers present) triggers a revision loop
+- Loop budget: 1 in `/rnd:plan`, 3 in `/rnd:validate`
+- Compact verification report format with requirement coverage matrix
 
 ## Quick Reference
 
 ### Validation Workflow
 
+The workflow branches by caller:
+
 ```
-Proposal/Plan arrives
-     |
-     v
-[assumption-challenging] -> Surface and categorize assumptions
-     |                      Assess evidence, risk, and validity
-     |
-     v
-[antipattern-detection] -> Scan for failure patterns
-     |                     Verify matches and assess severity
-     |
-     v
-[plan-verification]     -> Validate 7 dimensions (if build plans)
-     |
-     v
-[validation-reports]    -> Determine verdict using decision tree
-                          Generate structured 8-section report
+                         Proposal / Plan arrives
+                                  |
+                                  v
+              Which command is invoking the critic?
+                                  |
+       +--------------------------+--------------------------+
+       |                          |                          |
+       v                          v                          v
+  /rnd:plan small           /rnd:plan std/lg           /rnd:validate
+       |                          |                          |
+   (skip critic)         [plan-verification]    [assumption-challenging]
+                                  |                          |
+                          Compact verdict        [antipattern-detection]
+                          1-loop budget                      |
+                          BLOCKERs only             [plan-verification]
+                                                             |
+                                                    [validation-reports]
+                                                    8-section report
+                                                    3-loop budget
 ```
 
 ### Assumption Categories

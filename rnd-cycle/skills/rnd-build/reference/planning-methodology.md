@@ -1,180 +1,152 @@
 # Planning Methodology
 
-Reference material for the rnd-planner agent. Covers how to decompose project phases into executable build plans.
+Reference material for the rnd-planner agent. Covers how to decompose project phases into executable build plans that prime rnd-coder agents.
 
-## Plans-Are-Prompts Principle
+## Plans Are Prompts
 
-Plans are not documentation for humans. They are prompts consumed by rnd-coder agents running in fresh context windows. This distinction drives every planning decision:
+Plans are not documentation for humans. They are prompts consumed by rnd-coder agents running in fresh context windows. This drives every planning decision:
 
 | Human Documentation | Plan-as-Prompt |
 |---|---|
-| Assumes reader has project context | Must be self-contained |
-| Can be vague ("implement authentication") | Must be precise ("create JWT middleware that validates tokens from the Authorization header") |
+| Assumes reader has project context | Coder receives plan + arch slice + spec slice in priming prompt |
+| Can be vague ("implement authentication") | Must be precise ("create JWT middleware validating tokens from Authorization header") |
 | Organized for reference/scanning | Organized for sequential execution |
-| Can reference other docs | Must embed all needed context inline |
+| Restates context inline | Points at the canonical source (arch §X, spec REQ-Y) |
 
-The executor loads the plan into a fresh 200K context window. It knows nothing about the project except what the plan tells it. If context is missing from the plan, the executor will either guess wrong or fail.
+## Plan = Task / Arch = Shape / Spec = Reqs
 
-## Task Breakdown Rules
+Three artifacts, three roles. Never duplicate content across them:
 
-Every task in a plan must have four fields:
+- **Plan** — the *task*: what to build, what files to touch, how to verify it's done
+- **Arch** (`.rnd/architecture/current.md`) — the *shape*: contracts at the seams, mechanisms, data flow, component boundaries
+- **Spec** (`.rnd/spec/spec.md`) — the *requirements*: REQ-IDs, acceptance criteria, success metrics
 
-### Files
-Exact file paths that will be created or modified. No wildcards, no "and related files." The executor needs to know exactly which files to touch.
+When the coder is spawned (per `commands/c-build.md` and `commands/c-run.md`), it receives all three: the plan text, the arch sections referenced by the plan's "Wires to" section, and the spec REQ rows for the IDs in the plan's `requirements` frontmatter. Plans do not re-embed contracts or requirements — they point.
 
-### Action
-Specific implementation instructions. Not "implement the API" but "create a POST endpoint at /api/auth/login that accepts { email, password } in the request body, validates against the users table, returns a JWT token with 24h expiry, and returns 401 for invalid credentials."
+## No Code in Plans
 
-Include:
-- What to build
-- What patterns to follow (reference existing code if applicable)
-- What libraries/utilities to use
-- Expected function signatures or API contracts
+Plans describe *what* to build and *what done looks like*. They never include:
 
-### Verify
-A command or check the executor can run to confirm the task is done. Must complete in <10 seconds and be read-only (no side effects).
+- Class bodies, function signatures with type annotations/defaults, decorators, async function bodies
+- Type definitions, Pydantic schemas, API contracts in code form
+- Bash one-liners as task content (commands belong in `Done:` verification lines, not task bodies)
 
-Examples:
-- `just typecheck` (runs TypeScript compiler)
-- `just test -- --filter auth` (runs specific test suite)
-- "File exists at src/middleware/auth.ts and exports `authMiddleware` function"
-- `just lint -- src/api/auth.ts` (lints specific file)
+If the contract matters, it lives in the arch doc. The plan points at it.
 
-### Done
-Binary acceptance criteria. Unambiguous pass/fail — no "mostly works" or "looks good."
+❌ Don't put this in a plan task:
+```python
+async def retrieve_sources(query: str, depth: Literal["shallow","balanced","deep"]) -> SourceBundle: ...
+```
 
-Examples:
-- "POST /api/auth/login returns 200 with JWT for valid credentials and 401 for invalid credentials"
-- "UserService class exists with login(), logout(), and getCurrentUser() methods"
-- "All existing tests pass and 3 new tests added for auth middleware"
+✅ Do put this in a plan task:
+> **Build:** Implement `retrieve_sources` per arch §5.1. Three async LLM selection calls (books, chapters, lectures) per arch §2.3; run books and lectures in parallel, chapters sequentially after book selection. Return a `SourceBundle` per arch §4.
+> **Done:** `python -c "import asyncio; from agent_mani.vault import retrieve_sources; asyncio.run(retrieve_sources('test'))"` returns a populated SourceBundle within ~5s.
+
+## Plan Anatomy
+
+### Frontmatter (5 flat fields)
+
+```yaml
+---
+id: NN-short-name
+wave: N
+depends_on: [NN-other-id]
+files: [src/path/to/file.ts, ...]
+requirements: [REQ-XXX-NN]
+---
+```
+
+### Body
+
+- `# Plan NN — Name` (H1)
+- `## Goal` — one paragraph: what + why, pointing at arch + spec
+- `## Wires to` — bullet list of arch sections and spec REQs the plan touches
+- `## Tasks` — H3 task sections (2-3 per plan), each with `**Build:**` and `**Done:**`
+
+### Task Anatomy
+
+Each task has exactly two fields:
+
+**Build:** What to build, in behavior terms. Reference arch sections for shape. Reference spec REQs for acceptance. Never include code or signatures.
+- What behavior to implement
+- Which patterns to follow (point at arch sections)
+- Which existing utilities/libraries to use (by name, not by code)
+
+**Done:** Binary acceptance — unambiguous pass/fail. Often IS the verify command:
+- `just typecheck` exits 0
+- `python -c "from agent_mani.vault import retrieve_sources"` succeeds
+- `pytest tests/test_vault_retrieve.py` passes
+- File `src/middleware/auth.ts` exports `authMiddleware`
+
+If Done can't be expressed as a command, use a binary statement:
+- "All existing tests pass and 3 new tests added covering REQ-AUTH-01..03"
+- "Component renders without errors at the URL shown in spec REQ-UI-02"
 
 ## Scope Estimation
 
 Target ~50% context window utilization per plan (~100K tokens of work).
 
-### Context Budget Breakdown
+### Context Budget
 | Activity | Tokens |
 |---|---|
-| Plan loading + project context | ~10K |
+| Plan + arch slice + spec slice (priming) | ~20K |
 | File reads (existing code) | ~20K |
 | Implementation (code written) | ~30K |
 | Verification + debugging | ~20K |
 | Summary creation | ~5K |
-| Safety buffer | ~15K |
+| Safety buffer | ~5K |
 | **Total** | **~100K** |
-
-### Quality Degradation Curve
-- **0-50% context**: High quality. Executor follows instructions precisely, verifies thoroughly.
-- **50-75% context**: Quality degrades. Executor may skip verification steps, produce less clean code.
-- **75-90% context**: Significant degradation. Executor may hallucinate imports, skip edge cases.
-- **90%+ context**: Unreliable. Executor may produce broken code, false completion claims.
 
 ### Sizing Heuristic
 - 2-3 tasks per plan
 - Each task: 15-60 minutes of estimated implementation work
 - If a task would take >60 minutes, split it into subtasks across plans
 
-## Dependency Graph Construction
+Quality degrades sharply above 50% context. Keep plans lean.
 
-### Step 1: List All Plans
-Enumerate every plan for the phase with its inputs and outputs.
+## Dependency Graph + Waves
 
-### Step 2: Identify Productions
-For each plan, what does it produce?
-- New files (types, services, components, configs)
-- New exports (functions, classes, constants)
-- New API endpoints
-- New database tables/migrations
-- New test fixtures
+### Building the Graph
+1. List all plans for the phase
+2. For each plan, identify what it **produces** (exports, types, APIs, DB tables)
+3. For each plan, identify what it **consumes** (imports, API calls, type references)
+4. Draw edges: if Plan B consumes what Plan A produces, B depends on A
 
-### Step 3: Identify Consumptions
-For each plan, what does it consume?
-- Imports from other plans' files
-- API calls to other plans' endpoints
-- Database queries against other plans' tables
-- Type references from other plans' type definitions
+### Wave Assignment
+1. Plans with no dependencies → Wave 1
+2. Plans whose dependencies are all in Wave 1 → Wave 2
+3. Continue until all plans are assigned
 
-### Step 4: Draw Edges
-If Plan B consumes what Plan A produces, draw an edge: A → B (B depends on A).
+Plans in the same wave run in parallel; waves run sequentially.
 
-### Step 5: Detect Cycles
-If the graph has cycles (A → B → C → A), restructure:
-- Extract the shared dependency into its own plan
-- Merge the cyclically-dependent plans into one
-- Introduce an interface plan that defines contracts without implementation
+### Rules
+- No circular dependencies. If found, extract shared dep into its own plan, merge cyclic plans, or introduce an interface plan.
+- All `depends_on` references must point to existing plan IDs.
+- Minimize wave count (fewer waves = faster execution).
 
-## Wave Assignment Algorithm
+## Vertical Slices Over Horizontal Layers
 
-```
-FUNCTION assignWaves(plans):
-  FOR each plan P:
-    IF P has no dependencies:
-      P.wave = 1
-    ELSE:
-      P.wave = MAX(dependency.wave for all dependencies) + 1
-  RETURN plans sorted by wave
-```
+Prefer plans that deliver a complete vertical slice (DB + API + UI for one feature) over horizontal layers (all DB, then all API, then all UI). Vertical slices are independently testable and produce working increments.
 
-Properties:
-- Plans in the same wave have no dependencies on each other → can execute in parallel
-- Plans in wave N+1 depend only on plans in waves 1..N → sequential after prior waves complete
-- Fewer waves = faster total execution time
-
-## Vertical Slices vs Horizontal Layers
-
-### Horizontal Layers (avoid)
-```
-Plan 1: All database tables
-Plan 2: All API endpoints
-Plan 3: All UI components
-```
-Problems:
-- Can't test anything until all 3 plans complete
-- Each plan touches many unrelated concerns
-- Integration issues discovered late
-
-### Vertical Slices (prefer)
-```
-Plan 1: User auth (DB + API + UI for login/signup)
-Plan 2: User profile (DB + API + UI for profile management)
-Plan 3: Dashboard (DB + API + UI for dashboard data)
-```
-Benefits:
-- Each plan delivers a testable increment
-- Integration verified within the plan
-- Failures are contained to one feature
-
-### When Horizontal Is Acceptable
-- Shared infrastructure (database migrations, config setup) — Wave 1 horizontal plan, then vertical slices in Wave 2+
-- Cross-cutting concerns (auth middleware, error handling) that many features depend on
-
-## Interface-First Ordering
-
-Within a plan, order tasks so contracts come before implementations:
-
-1. **Task 1**: Define types, interfaces, API contracts
-2. **Task 2**: Implement against the contracts
-3. **Task 3**: Wire up and verify integration
-
-This ensures the executor has stable interfaces to code against, reducing back-and-forth modifications.
+When horizontal is acceptable: shared infrastructure (database migrations, config setup) — Wave 1 horizontal plan, then vertical slices in Wave 2+.
 
 ## File Ownership
 
-No two plans in the same wave may modify the same file. This is a hard constraint for parallel execution.
+No two plans in the same wave may modify the same file. Hard constraint for parallel execution.
 
-### Checking File Ownership
-Before assigning plans to waves, build a file ownership map:
+### Strategies for Shared Files
+- **Defer to a wiring plan** — Wave N+1 handles shared files (index, routes, config) after Wave N plans complete
+- **Single owner per file** — one plan owns the file; others document what they need added (acted on in the wiring plan)
+- **Append-only patterns** — each plan adds to the file without modifying existing content (rare; usually creates merge headaches)
 
-```
-Plan 01 (Wave 1): src/types/user.ts, src/services/user.ts
-Plan 02 (Wave 1): src/types/post.ts, src/services/post.ts
-Plan 03 (Wave 1): src/services/user.ts  ← CONFLICT with Plan 01
-```
+The planner builds a file ownership map during decomposition and assigns waves accordingly.
 
-Resolution: Move Plan 03 to Wave 2 (after Plan 01 completes), or restructure so Plan 01 and Plan 03 don't both modify `src/services/user.ts`.
+## Interface-First Within a Plan
 
-### Shared Files
-Some files are naturally shared (index files, route registrations, config). Strategies:
-- Defer shared file modifications to a "wiring" plan in a later wave
-- Have one plan own the shared file and other plans document what they need added
-- Use append-only patterns where each plan adds to the file without modifying existing content
+When the contract is NOT already in the arch doc, order tasks so contracts come first:
+
+1. **Task 1**: Define types/interfaces
+2. **Task 2**: Implement against the contracts
+3. **Task 3**: Wire up and verify integration
+
+When the contract IS in the arch doc (the common case), skip Task 1 — the coder reads the arch slice instead.

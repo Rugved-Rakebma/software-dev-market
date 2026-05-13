@@ -1,7 +1,23 @@
 ---
-description: Validate plans, roadmaps, or proposals with ruthless honesty
+description: Heavy adversarial validation — plans, roadmaps, proposals. Loads full critic skill (assumption-challenging + antipattern-detection + plan-verification + validation-reports). Use when /rnd:plan's compact verdict isn't enough.
 argument-hint: [plan description or @file]
 ---
+
+## When to Use This vs `/rnd:plan`'s Built-in Critic
+
+`/rnd:plan` (standard/large scope) runs a **compact** critic — `plan-verification.md` only, 1-loop budget on blockers. Cheap pass.
+
+`/rnd:validate` is the **heavy** adversarial pass — loads the full critic skill:
+- `assumption-challenging.md` (5 categories of assumption stress-testing)
+- `antipattern-detection.md` (25+ failure-pattern catalog)
+- `plan-verification.md` (if validating build plans)
+- `validation-reports.md` (8-section structured verdict format)
+
+Use this when:
+- The plan/proposal is high-stakes and warrants deep adversarial review
+- The compact critic in `/rnd:plan` approved but you want a second opinion
+- Validating a roadmap, decision, or architecture (not just build plans)
+- Cost projections, timeline claims, or scale assumptions need stress-testing
 
 ## Prerequisites
 
@@ -12,7 +28,7 @@ argument-hint: [plan description or @file]
 
 Read prior context from `.rnd/`:
 - `.rnd/decisions/` — locked decisions
-- `.rnd/architecture/current.md` — architecture constraints
+- `.rnd/architecture/current.md` — architecture constraints (note scope assessment)
 - `.rnd/spec/spec.md` — requirements
 - `.rnd/audit/` — audit findings (if exists)
 
@@ -34,14 +50,15 @@ Provide the analyst's findings to the critic as context.
 ## Validation
 
 Spawn **rnd-critic** via the Agent tool:
-- **description**: "Validate: {target summary}"
+- **description**: "Heavy validation: {target summary}"
 - **model**: opus
 - **prompt**: Include:
   - The validation target (inline or file content)
   - Prior context (spec, architecture, decisions)
   - Analyst findings (if gathered)
-  - Reference to `skills/rnd-critic/` for validation methodology
-  - Instruction to produce an 8-section validation report with GOOD / NEEDS MAJOR WORK / BAD verdict
+  - **Instruction to load the full critic skill**: `assumption-challenging.md` + `antipattern-detection.md` + `plan-verification.md` (if build plans) + `validation-reports.md`
+  - Instruction to produce an 8-section validation report per `validation-reports.md` with **GOOD** / **NEEDS MAJOR WORK** / **BAD** verdict
+  - Max 3 revision loops on BLOCKERs (if plan validation)
 
 ## After Completion
 
@@ -49,6 +66,8 @@ Present the critic's verdict and report to the user. If the verdict is:
 - **GOOD** — suggest proceeding to the next lifecycle step
 - **NEEDS MAJOR WORK** — list specific issues to address and which command to use
 - **BAD** — recommend stepping back and rethinking the approach
+
+Advisories surface in the report regardless of verdict, but only blockers gate revision.
 
 ## Persistence
 
