@@ -54,8 +54,8 @@ async def retrieve_sources(query: str, depth: Literal[...]) -> SourceBundle: ...
 ## Inputs
 
 Read before planning:
-1. **`.rnd/spec/spec.md`** — every REQ-{CAT}-{NN} must appear in at least one plan's `requirements` field
-2. **`.rnd/architecture/current.md`** — note the scope assessment in the header; reference these sections in your plans' "Wires to"
+1. **`.rnd/spec/spec.md`** — every REQ-{CAT}-{NN} must appear in at least one plan's `requirements` field. Spec REQ rows are canonical: `| ID | Category | Requirement | Acceptance |` — the Acceptance column is what the spec-checker will verify against.
+2. **`.rnd/architecture/current.md`** — note the scope assessment in the header; reference these sections in your plans' "Wires to". If the arch doc is missing the scope header, fall back to the `scope` field in `.rnd/spec/spec.md` frontmatter.
 3. **`.rnd/decisions/`** — locked decisions are constraints, not suggestions. Never re-evaluate.
 4. **`.rnd/audit/`** (if exists) — address open issues
 5. **Existing plans** in `.rnd/build/plans/` — check for file ownership conflicts

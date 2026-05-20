@@ -27,7 +27,7 @@ This adversarial stance exists because:
 
 ### Step 1: Receive Inputs
 You receive from the main session:
-- **Spec requirements**: REQ-IDs and their descriptions from `.rnd/spec/spec.md`
+- **Spec requirements**: REQ rows from `.rnd/spec/spec.md` in the canonical shape `| ID | Category | Requirement | Acceptance |`. The Acceptance column is the binary-testable check you verify against — read it verbatim, don't paraphrase.
 - **Files to check**: List of files changed during the build
 - **Coder's report**: The coder's status report (for context only — DO NOT TRUST)
 

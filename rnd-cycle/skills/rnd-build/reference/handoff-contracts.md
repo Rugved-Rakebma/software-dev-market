@@ -18,6 +18,11 @@ arch_slices: |
 spec_req_rows: |
   Spec rows for the REQ-IDs listed in the plan's `requirements` frontmatter field.
   Carries the *requirements*: REQ descriptions and acceptance criteria from .rnd/spec/spec.md.
+  Canonical row shape: | ID | Category | Requirement | Acceptance |
+    - ID: REQ-{CAT}-{NN}
+    - Category: AUTH | UI | DATA | API | PERF | SEC | INFRA | BIZ | NOTIFY | REPORT | ADMIN
+    - Requirement: behavior, not implementation (no code, no signatures)
+    - Acceptance: binary-testable check (pass/fail, not "looks good")
 project_context: |
   Project state from .rnd/state.md and locked decisions from .rnd/decisions/.
 prior_wave_summaries: |
@@ -66,8 +71,9 @@ changes_made:
 **Input:**
 ```yaml
 spec_requirements: |
-  REQ-IDs and their descriptions from .rnd/spec/spec.md,
-  filtered to requirements relevant to the scope being verified.
+  REQ rows from .rnd/spec/spec.md filtered to requirements relevant to the scope being verified.
+  Same canonical shape as spec_req_rows above: | ID | Category | Requirement | Acceptance |
+  The spec-checker reads the Acceptance column verbatim — that IS the binary check.
 files_to_check:
   - List of files changed during the build
 coder_report: |

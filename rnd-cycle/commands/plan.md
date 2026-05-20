@@ -22,7 +22,7 @@ If `$ARGUMENTS` specifies a phase, scope planning to that phase only.
 
 ## Scope Gate (mandatory)
 
-Read the scope assessment from the top of `.rnd/architecture/current.md` (small / standard / large). If absent, default to **standard** and print a one-line warning.
+Read the scope assessment from the top of `.rnd/architecture/current.md` (small / standard / large). If absent, fall back to the `scope` field in `.rnd/spec/spec.md` frontmatter. If neither is present, default to **standard** and print a one-line warning.
 
 The scope controls critic policy:
 

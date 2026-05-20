@@ -36,13 +36,14 @@ Match references to scope:
 **Use when**: Turning ideas into structured specifications with testable requirements.
 
 Includes:
-- Problem framing techniques (problem-first, not solution-first)
-- Interview process for requirement extraction
-- REQ-{CAT}-{NN} identifier format and conventions
-- Scope classification decision tree (v1/v2/out-of-scope)
-- Gap identification checklist (15 common gaps)
-- Success criteria writing guide (binary-testable outcomes)
-- Open questions format that routes to /rnd:research
+- The three-artifact triangle (spec owns requirements only; no tech, no team, no roadmap)
+- Scope assessment (small / standard / large) captured in spec frontmatter as a fallback hint
+- Problem framing (problem-first, not solution-first)
+- Scope-gated interview rounds for requirement extraction
+- Canonical REQ row format: `| ID | Category | Requirement | Acceptance |`
+- Version classification (v1 / v2 / out-of-scope)
+- Scope-gated gap checklist (core 7 / +standard 5 / +large 3)
+- Open questions with HIGH/MEDIUM/LOW impact triage
 
 ### 2. Planning Methodology (`reference/planning-methodology.md`)
 **Use when**: Breaking project phases into executable build plans.
@@ -156,24 +157,27 @@ Includes:
 | **BLOCKED** | Cannot proceed | Surface to user, pause |
 | **NEEDS_CONTEXT** | Missing information, risks quality | Surface to user, decide if blocking |
 
-### Gap Checklist (Quick)
-| # | Gap Area | Ask |
-|---|----------|-----|
-| 1 | Auth | Who can access what? |
-| 2 | Error handling | What happens when things fail? |
-| 3 | Edge cases | What are the boundary conditions? |
-| 4 | Data migration | Is there existing data to move? |
-| 5 | Monitoring | How will you know it's healthy? |
-| 6 | Rollback | How do you undo a bad deploy? |
-| 7 | Rate limiting | What prevents abuse? |
-| 8 | Permissions | What's the authorization model? |
-| 9 | Offline | Does it need to work without network? |
-| 10 | Accessibility | Is a11y required? To what standard? |
-| 11 | i18n | Does it need multiple languages? |
-| 12 | Audit trail | Do actions need to be logged? |
-| 13 | Backup/recovery | What's the data loss tolerance? |
-| 14 | Deployment | Blue/green? Rolling? Canary? |
-| 15 | Multi-tenancy | Shared or isolated resources? |
+### Gap Checklist (scope-gated)
+
+Set reviewed depends on spec scope. Default to **small** unless the conversation proves otherwise.
+
+| # | Gap Area | Tier |
+|---|----------|------|
+| 1 | Auth | core (all) |
+| 2 | Error handling | core (all) |
+| 3 | Edge cases | core (all) |
+| 4 | Data migration | core (all) |
+| 5 | Monitoring | core (all) |
+| 6 | Rollback | core (all) |
+| 7 | Permissions | core (all) |
+| 8 | Rate limiting | +standard |
+| 9 | External dependencies | +standard |
+| 10 | Audit trail | +standard |
+| 11 | Deployment strategy | +standard |
+| 12 | Backup/recovery | +standard |
+| 13 | Multi-tenancy | +large |
+| 14 | Accessibility | +large |
+| 15 | i18n | +large |
 
 ## Usage Flow
 

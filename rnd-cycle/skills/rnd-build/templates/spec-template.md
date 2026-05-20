@@ -1,43 +1,37 @@
-# Project Spec: [Project Name]
+---
+scope: standard
+---
 
-## Vision
-[2-3 sentence core value proposition. What problem does this solve and for whom?]
+# Project Spec — [Project Name]
+
+## Problem
+
+One paragraph. Who experiences what problem, in what context, with what impact. Problem-first, not solution-first.
 
 ## Users
-[Primary users and their needs. Secondary users if applicable.]
+
+Primary users and their goals. Secondary users only if they materially shape requirements.
 
 ## Requirements
 
 ### v1 — Must Have
-| ID | Category | Requirement | Acceptance Criteria |
-|----|----------|-------------|---------------------|
-| REQ-AUTH-01 | Auth | [requirement] | [testable criteria] |
+
+| ID | Category | Requirement | Acceptance |
+|----|----------|-------------|------------|
+| REQ-AUTH-01 | Auth | [behavior, not implementation] | [binary-testable check] |
 
 ### v2 — Planned
-| ID | Category | Requirement | Notes |
-|----|----------|-------------|-------|
-| REQ-XXX-01 | [cat] | [requirement] | [why deferred] |
+
+| ID | Category | Requirement | Why deferred |
+|----|----------|-------------|--------------|
+| REQ-XXX-01 | [cat] | [behavior] | [reason] |
 
 ### Out of Scope
-- [Explicitly excluded item] — [brief reason]
 
-## Constraints
-- **Budget:** [budget or "not constrained"]
-- **Timeline:** [deadline or phases]
-- **Team:** [size, skills, availability]
-- **Technology:** [required tech, forbidden tech, or "flexible"]
-- **Compliance:** [GDPR, HIPAA, SOC 2, etc. or "none"]
-
-## Success Criteria
-1. [Measurable, binary-testable outcome]
-2. [Measurable, binary-testable outcome]
-3. [Measurable, binary-testable outcome]
+- [Excluded item] — [brief reason]
 
 ## Open Questions
-- [ ] **OQ-01**: [Question that needs /rnd:research]
-  - **Context**: [Why this matters to the spec]
-  - **Impact**: [HIGH/MEDIUM/LOW]
-  - **Route**: /rnd:research [specific research prompt]
 
-## Assumptions
-- [Assumption that needs /rnd:validate]
+- [ ] **OQ-01**: [Question]
+  - **Impact**: HIGH | MEDIUM | LOW
+  - **Route**: `/rnd:research [prompt]` (HIGH = blocking; MEDIUM = proceed with assumption; LOW = defer)
