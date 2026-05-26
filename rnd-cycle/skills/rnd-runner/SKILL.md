@@ -34,7 +34,7 @@ Includes:
 - The "mechanical vs judgment-call" decision rule for blockers
 - Full pause-trigger list with pause format
 - Loop limits (`fix_loop_max: 2`)
-- Backlog routing rules
+- Backlog routing — pre-flight scan (Stage 1), dedup-with-origin-tags on create (Stage 8.4), auto-close on fix (Stage 8.5)
 - Decision logging format (sub-lines under leaves)
 
 ### 3. Worktree Merge (`reference/worktree-merge.md`)

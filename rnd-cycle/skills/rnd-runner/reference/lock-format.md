@@ -123,6 +123,7 @@ Eight stages. Apply to every `/rnd:c-run` invocation. Stages 6 and 7 are conditi
 - [ ] 1.1 verify clean working tree on main (no uncommitted changes)
 - [ ] 1.2 confirm plans for {scope} exist in .rnd/build/plans/
 - [ ] 1.3 read prior wave summary for context handoff
+- [ ] 1.4 backlog pre-flight scan: surface open .rnd/backlog/ items whose related-files overlap with this wave's plan files. Recorded as sub-lines under this leaf for Stage 8.5 to re-evaluate. See decision-policy.md Backlog Routing.
 - gate: all checks pass
 
 ## Stage 2 — Build + Simplify (parallel per plan)
@@ -177,8 +178,9 @@ Leaves filled at runtime based on Stage 5 categorization.
 - [ ] 8.1 update .rnd/build/progress.md: move plans built in this run from ## Pending/## In Progress into ## Completed (per-plan bullets); set frontmatter status: complete
 - [ ] 8.2 update .rnd/state.md Recent Activity (compression protocol — see commands/c-build.md)
 - [ ] 8.3 write .rnd/verifications/{scope}-{date}.md (consolidated verdict)
-- [ ] 8.4 scan ALL streams for BACKLOG CANDIDATE markers (coder advisories + verifier advisories), create backlog items per commands/backlog.md format
-- [ ] 8.5 set this run.md frontmatter status: complete
+- [ ] 8.4 backlog dedup + create: scan ALL streams for BACKLOG CANDIDATE markers; dedup against existing open items (same category + file overlap + ≥50% token overlap) — on match, bump seen-count + last-seen on the existing file; on miss, create per commands/backlog.md with required origin tags (discovered-during / discovered-by). See decision-policy.md Stage 8.4.
+- [ ] 8.5 backlog auto-close on fix: re-evaluate items surfaced in Stage 1's pre-flight scan. Close with resolution: fixed-incidental when (a) related-files modified in this run AND (b) no new finding in this run matches the item's signature. See decision-policy.md Stage 8.5.
+- [ ] 8.6 set this run.md frontmatter status: complete
 - gate: none, done
 ```
 

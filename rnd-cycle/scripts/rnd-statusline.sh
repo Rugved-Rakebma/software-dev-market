@@ -139,13 +139,24 @@ if [ -f "$PROGRESS_FILE" ] && [ "$PLAN_COUNT" -gt 0 ]; then
 fi
 
 # --- Count backlog ---
-BACKLOG_TOTAL=0; BACKLOG_CRITICAL=0; BACKLOG_HIGH=0
+BACKLOG_TOTAL=0; BACKLOG_CRITICAL=0; BACKLOG_HIGH=0; BACKLOG_STALE=0
+STALE_DAYS=30
+NOW_EPOCH=$(date "+%s" 2>/dev/null || echo 0)
 if [ -d "$RND_DIR/backlog" ]; then
   shopt -s nullglob 2>/dev/null
   for item in "$RND_DIR/backlog"/*.md; do
     BACKLOG_TOTAL=$((BACKLOG_TOTAL + 1))
     grep -q 'priority: critical' "$item" 2>/dev/null && BACKLOG_CRITICAL=$((BACKLOG_CRITICAL + 1))
     grep -q 'priority: high' "$item" 2>/dev/null && BACKLOG_HIGH=$((BACKLOG_HIGH + 1))
+    # Stale detection — discovered > STALE_DAYS ago
+    DISCOVERED=$(awk -F': *' '/^discovered:/ {gsub(/[ \t]+$/, "", $2); print $2; exit}' "$item" 2>/dev/null)
+    if [ -n "$DISCOVERED" ] && [ "$NOW_EPOCH" -gt 0 ]; then
+      DISC_EPOCH=$(date -j -f "%Y-%m-%d" "$DISCOVERED" "+%s" 2>/dev/null || date -d "$DISCOVERED" "+%s" 2>/dev/null || echo 0)
+      if [ "$DISC_EPOCH" -gt 0 ]; then
+        AGE_DAYS=$(( (NOW_EPOCH - DISC_EPOCH) / 86400 ))
+        [ "$AGE_DAYS" -gt "$STALE_DAYS" ] && BACKLOG_STALE=$((BACKLOG_STALE + 1))
+      fi
+    fi
   done
   shopt -u nullglob 2>/dev/null
 fi
@@ -191,11 +202,17 @@ fi
 if [ "$BACKLOG_TOTAL" -gt 0 ]; then
   [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
   SEGMENTS+="${WHITE}📬 ${BACKLOG_TOTAL} backlog${RESET}"
+  ANNOTS=""
   if [ "$BACKLOG_CRITICAL" -gt 0 ]; then
-    SEGMENTS+=" \033[38;5;180m(${BACKLOG_CRITICAL} critical)${RESET}"
+    ANNOTS+="${BACKLOG_CRITICAL} critical"
   elif [ "$BACKLOG_HIGH" -gt 0 ]; then
-    SEGMENTS+=" \033[38;5;180m(${BACKLOG_HIGH} high)${RESET}"
+    ANNOTS+="${BACKLOG_HIGH} high"
   fi
+  if [ "$BACKLOG_STALE" -gt 0 ]; then
+    [ -n "$ANNOTS" ] && ANNOTS+=" · "
+    ANNOTS+="${BACKLOG_STALE} stale"
+  fi
+  [ -n "$ANNOTS" ] && SEGMENTS+=" \033[38;5;180m(${ANNOTS})${RESET}"
 fi
 if [ "$DECISION_COUNT" -gt 0 ]; then
   [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"

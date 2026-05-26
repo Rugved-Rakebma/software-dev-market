@@ -120,7 +120,23 @@ Increment `fix_loop_count` at Stage 6.4 (after fix coders complete, before re-ve
 
 ## Backlog Routing
 
-At Stage 8, scan all sources for `BACKLOG CANDIDATE` markers:
+Backlog is an active queue, not a write-only log. Three policies govern how `/rnd:c-run` interacts with it: **pre-flight scan** (Stage 1), **auto-close on fix** (Stage 8), and **dedup-aware create with origin tagging** (Stage 8.4).
+
+### Pre-flight scan (Stage 1)
+
+Before building, scan `.rnd/backlog/` for open items whose `related-files` overlap with the upcoming wave's plan `files`. Surface them in the pre-flight summary:
+
+```
+Backlog context for this wave:
+- BUG-008 (medium, 12d): "Null pointer when user.profile is undefined" — src/profile/loader.ts
+- UX-003 (medium, seen 3x): "Loading state missing on Dashboard" — src/components/Dashboard.tsx
+```
+
+The wave's coders are not told to fix these — but the human reviewing the lock now knows that relevant items exist. After Stage 7 passes, the auto-close check below will re-evaluate them.
+
+### Stage 8.4 — Create with dedup + origin tags
+
+For each `BACKLOG CANDIDATE` marker scanned from:
 
 | Source | Where to look |
 |---|---|
@@ -129,9 +145,27 @@ At Stage 8, scan all sources for `BACKLOG CANDIDATE` markers:
 | Reviewer advisories | `advisories[]` array (all are backlog candidates) |
 | Analyst findings | Findings tagged ADVISORY |
 
-For each candidate, create a backlog item per `commands/backlog.md` format:
-- Auto-create when category and priority are clear from the marker (e.g. `BUG / medium / src/auth/token.ts:45 / token refresh edge case`).
-- Pause to ask the user only when category or priority is ambiguous.
+**Step 1 — Dedup check.** Before creating a new file, scan existing open items in `.rnd/backlog/`. A match exists when ALL of:
+- Same `category`
+- `related-files` overlap (at least one file in common)
+- Description tokens overlap ≥ 50% (simple token match — stop-word stripped)
+
+On match: **do not create a new file**. Update the existing item:
+- `seen-count` += 1 (treat missing field as 0, so first dedup sets it to 1, then 2 on next match)
+- `last-seen` = today's date (set if missing)
+- Append a one-line note to the item's Context section: `- Seen again in run {run-id} by {agent}.`
+
+**Backward compatibility:** pre-existing backlog items created before this policy was introduced may lack `seen-count`, `last-seen`, `discovered-during`, and `discovered-by`. The runner treats missing fields as defaults (`seen-count` → 0 pre-increment; `last-seen` → item's `discovered` date; origin tags → leave absent). Never error on missing optional fields.
+
+**Step 2 — Origin tagging (required on auto-create).** When creating a new item, the runner populates these fields from its own context — agents do not need to emit them:
+- `discovered-during: /rnd:c-run {run-id}`
+- `discovered-by: {agent-name}` (e.g. `rnd-code-reviewer`)
+- `seen-count: 1`
+- `last-seen: {today}`
+
+Origin tags are **required** on auto-create. If the runner cannot determine `discovered-by` from the source, log this as a triage bug and pause (the agent emitting the BACKLOG CANDIDATE marker should be identifiable from the source).
+
+**Step 3 — Category/priority defaults.** Auto-create when category and priority are clear from the marker. Pause to ask the user only when ambiguous.
 
 Default category mapping if not specified by the verifier:
 - Security findings → `SEC`
@@ -139,6 +173,29 @@ Default category mapping if not specified by the verifier:
 - Reviewer suggestions (deferred) → `DEBT`
 - Analyst debt findings → `DEBT`
 - Spec-checker missing-feature findings → `FEAT` (unless explicitly bug)
+
+### Stage 8.5 — Auto-close on fix
+
+After the new advisories are created/merged, check the open items surfaced in Stage 1.4's pre-flight scan. The auto-close test is **signal-based**, not code-pattern-based — the runner can't reliably grep for arbitrary patterns described in prose.
+
+**Auto-close criteria (must ALL hold):**
+1. The item's `related-files` overlap with this run's diff files (the wave actually touched the relevant code).
+2. **No new finding** in this run matches the item's signature — i.e. the dedup check in 8.4 did NOT find a match for any new advisory against this item. (If the symptom recurred, 8.4 would have bumped `seen-count` and we'd see it; absence is the signal.)
+
+When both hold: auto-close with `resolution: fixed-incidental`. Log under Stage 8 leaves:
+```markdown
+- [x] 8.5 backlog auto-close
+       closed-by-fix: BUG-008 (profile loader modified in wave-06, no recurrence in verify)
+       no-change: SEC-003 (related-files not touched this run)
+```
+
+When criterion 1 holds but criterion 2 doesn't (the item's symptom recurred), leave open and let 8.4's seen-count bump capture the recurrence. When neither holds, leave open. The next `/rnd:backlog sweep` will surface candidates manually.
+
+**Why this is conservative.** We never claim "the bug is gone" — only "files moved and no new finding flagged this". A user-invoked sweep is the safety net for items where the runner's signal isn't strong enough.
+
+### Sweep (advisory, user-invoked)
+
+`/rnd:backlog sweep` runs the full triage report — aging, recurring symptoms, dedup candidates, resolution candidates — and surfaces them for the user to manually close or promote. The sweep itself never mutates state. See `commands/backlog.md` for sweep heuristics + promote policy.
 
 ## Decision Logging
 

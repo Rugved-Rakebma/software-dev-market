@@ -44,7 +44,7 @@ Print this reference card:
 | Command        | What It Does                                   |
 |----------------|------------------------------------------------|
 | /rnd:audit     | Deep analysis of code or documents             |
-| /rnd:backlog   | Manage discovered issues (add/list/close)      |
+| /rnd:backlog   | Manage discovered issues (add/list/close/promote/sweep) |
 | /rnd:status    | Show project state and next steps              |
 | /rnd:help      | This reference card                            |
 

@@ -19,7 +19,7 @@ Only if `.rnd/` doesn't exist. Create:
 ```
 .rnd/
 ├── state.md
-├── spec/
+├── spec/                  # spec.md uses frontmatter `scope: small|standard|large` — see spec-template.md
 ├── research/
 ├── decisions/
 │   └── index.md
@@ -27,12 +27,15 @@ Only if `.rnd/` doesn't exist. Create:
 │   └── history/
 ├── audit/
 ├── build/
-│   └── plans/
+│   ├── plans/
+│   └── runs/              # /rnd:c-run lock files (per-invocation, permanent)
 ├── debug/
 ├── verifications/
-└── backlog/
+└── backlog/               # items follow commands/backlog.md schema (id, category, priority, discovered, discovered-during, discovered-by, related-files, seen-count, last-seen)
     └── closed/
 ```
+
+The backlog directory holds frontmatter-yaml items; the schema is defined in `commands/backlog.md` and auto-populated by `/rnd:c-run` Stage 8.4. Manual items can be created via `/rnd:backlog add` (interactively prompts for the required fields).
 
 ## Step 2 — Initialize State Files
 

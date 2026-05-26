@@ -46,6 +46,12 @@ Parse `$ARGUMENTS`:
 
 If parse fails: "Usage: `/rnd:c-run wave N` | `/rnd:c-run phase N` | `/rnd:c-run` (all remaining)"
 
+## Phase 0 — Backlog Pre-flight Context
+
+Before generating the lock, scan `.rnd/backlog/` for open items whose `related-files` overlap with the upcoming wave's plan `files`. Capture these as sub-lines under leaf 1.4 in the lock — they're not built or fixed by this run, but Stage 8.5 will re-evaluate them for auto-close after Stage 7 passes.
+
+**Interruption note:** Phase 0 produces no persisted artifact until Stage 1.4 records its results. If interrupted before the lock is written (Phase 1), there is no lock to resume — re-invoke `/rnd:c-run` to restart from scratch. The Resume Check only fires once a lock with `status: running` exists.
+
 ## Phase 1 — Generate Lock
 
 Construct the lock file at `.rnd/build/runs/{run-id}.md` per `reference/lock-format.md`:
@@ -53,14 +59,14 @@ Construct the lock file at `.rnd/build/runs/{run-id}.md` per `reference/lock-for
 1. **Frontmatter**: `run_id`, `scope`, `plans` (read from `.rnd/build/plans/` matching scope), `status: running`, `created`, `last-updated`, `fix_loop_count: 0`, `fix_loop_max: 2`.
 
 2. **Body**: write all 8 stages from the standard skeleton. For each stage:
-   - Stage 1 (Pre-flight): static checks
+   - Stage 1 (Pre-flight): static checks + backlog scan (surface items whose related-files overlap with this wave's plan files)
    - Stage 2 (Build + Simplify): one leaf per plan, with the plan name and the worktree branch name `feature/run-{run-id}-{plan-name}`
    - Stage 3 (Merge): one merge leaf per plan, ordered by plan dependencies (read each plan's frontmatter for deps); plus delete + checkpoint commit leaves
    - Stage 4 (Verify): three fixed leaves (spec-checker, reviewer, analyst)
    - Stage 5 (Triage): tagged `[ADAPTIVE]`; placeholder leaves for "collect verdicts," "categorize findings," "record triage decision"
    - Stage 6 (Fix-up): tagged `[CONDITIONAL — only if Stage 5 categorized to-fix items, ADAPTIVE]`; placeholder leaves
    - Stage 7 (Re-verify): tagged `[CONDITIONAL — only if Stage 6 ran]`; two fixed leaves (spec-checker, reviewer)
-   - Stage 8 (Finalize): five static leaves
+   - Stage 8 (Finalize): six static leaves (progress, state, verifications, backlog dedup+create with origin tags, backlog auto-close-on-fix, mark complete)
 
 3. **Gates**: write a `gate:` line at the end of every stage per `reference/lock-format.md`.
 
@@ -220,13 +226,14 @@ Gate per `reference/decision-policy.md`:
    - `{today's date}: Run {run-id} via /rnd:c-run — {scope}, {N} plans, run verdict: {PASS|CONDITIONAL|FAIL}, fix loops: {fix_loop_count}`
    - Follow compression protocol: keep under 120 lines, compress oldest Recent Activity entries into History phase summaries when exceeding 15 entries. Never delete entries.
 3. **Write `.rnd/verifications/{scope}-{date}.md`** — consolidated verdict report from Stages 4 + 7 (use the same template as `/rnd:c-verify`).
-4. **Backlog creation**: scan all sources per `reference/decision-policy.md` Backlog Routing:
+4. **Backlog dedup + create**: scan all sources per `reference/decision-policy.md` Backlog Routing → Stage 8.4:
    - Coder concerns from Stages 2 + 6
    - Verifier findings flagged BACKLOG CANDIDATE or routed as nit
    - Analyst findings (all)
-   - Auto-create items per `commands/backlog.md` format when category + priority are clear.
-   - For ambiguous candidates: pause once at the end with a list, ask the user to bulk-decide.
-5. **Mark this run.md frontmatter `status: complete`**.
+   - For each candidate: dedup against existing open items first (same category + overlapping related-files + description token overlap ≥ 50%). On match → increment `seen-count` + update `last-seen` on the existing item. On miss → auto-create per `commands/backlog.md` format with required origin tags (`discovered-during: /rnd:c-run {run-id}`, `discovered-by: {agent-name}`).
+   - For ambiguous category/priority: pause once at the end with a list, ask the user to bulk-decide.
+5. **Backlog auto-close on fix**: re-evaluate the open items surfaced in Stage 1.4's pre-flight scan. Signal-based test (NOT code-pattern grep): an item closes when (a) its `related-files` overlap with this run's diff AND (b) the dedup check in 8.4 found no new finding matching the item's signature. Close with `resolution: fixed-incidental`, move to `.rnd/backlog/closed/`. Items where the symptom recurred (8.4 matched and bumped `seen-count`) stay open. Log decisions as sub-lines per `reference/decision-policy.md` Stage 8.5.
+6. **Mark this run.md frontmatter `status: complete`**.
 
 ## After Completion
 

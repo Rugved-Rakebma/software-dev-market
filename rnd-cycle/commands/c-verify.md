@@ -96,7 +96,7 @@ If **PASS**:
 
 ## Backlog Collection
 
-Scan all agent outputs for `BACKLOG CANDIDATE` items. If found, offer to create backlog items via `/rnd:backlog add`.
+Scan all agent outputs for `BACKLOG CANDIDATE` items and surface them in the verification report. **`/rnd:c-verify` does NOT auto-create backlog items** — that's `/rnd:c-run`'s job (Stage 8.4, with dedup + origin tagging). Standalone verify reports findings; the user runs `/rnd:backlog add` interactively for any they want tracked, or re-runs `/rnd:c-run` to get auto-creation.
 
 ## Persistence
 
