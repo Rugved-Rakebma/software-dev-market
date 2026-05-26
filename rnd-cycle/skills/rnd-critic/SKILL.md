@@ -17,11 +17,15 @@ The critic is invoked from multiple commands with different budgets. Load only w
 | `/rnd:plan` (standard/large scope) | `plan-verification.md` only | Max **1** revision loop on BLOCKERs only | Cheap pass — catch real plan bugs before build |
 | `/rnd:plan` (small scope) | (skip the critic entirely) | — | Small projects don't warrant the ceremony; user can run `/rnd:validate` manually |
 | `/rnd:validate` | All four references | Max **3** revision loops | Heavy adversarial pass — full 8-section validation report |
-| `/rnd:decide` | `assumption-challenging.md` + `antipattern-detection.md` | N/A (not a build plan) | Reason about decisions/tradeoffs |
+| `/rnd:decide` (small scope) | (skip the critic entirely) | N/A | Tiny decisions don't warrant adversarial framework load |
+| `/rnd:decide` (standard scope) | `assumption-challenging.md` only | N/A | Surface top 3-5 assumptions; skip antipattern catalog |
+| `/rnd:decide` (large scope) | `assumption-challenging.md` + `antipattern-detection.md` | N/A | Full strategic review — all 5 assumption categories + antipattern scan |
 
-**Do not load `validation-reports.md` for `/rnd:plan`** — it's the heavy 8-section format used by `/rnd:validate`. `/rnd:plan` uses the compact verdict format defined in `plan-verification.md`.
+**Do not load `validation-reports.md` for `/rnd:plan` or `/rnd:decide`** — it's the heavy 8-section format used by `/rnd:validate`. Plan and decide use compact formats.
 
 **Do not load `antipattern-detection.md` or `assumption-challenging.md` for `/rnd:plan`** — they're 800+ and 500+ lines respectively, written for strategic adversarial review, not lightweight plan checking.
+
+**Scope source for `/rnd:plan` and `/rnd:decide`:** read from `.rnd/architecture/current.md` header; fall back to `.rnd/spec/spec.md` frontmatter `scope` field; default to standard.
 
 ## Reference Documents
 
@@ -78,25 +82,21 @@ The critic is invoked from multiple commands with different budgets. Load only w
 The workflow branches by caller:
 
 ```
-                         Proposal / Plan arrives
+                         Proposal / Plan / Decision arrives
                                   |
                                   v
-              Which command is invoking the critic?
+              Which command is invoking the critic? At what scope?
                                   |
-       +--------------------------+--------------------------+
-       |                          |                          |
-       v                          v                          v
-  /rnd:plan small           /rnd:plan std/lg           /rnd:validate
-       |                          |                          |
-   (skip critic)         [plan-verification]    [assumption-challenging]
-                                  |                          |
-                          Compact verdict        [antipattern-detection]
-                          1-loop budget                      |
-                          BLOCKERs only             [plan-verification]
-                                                             |
-                                                    [validation-reports]
-                                                    8-section report
-                                                    3-loop budget
+       +------------------+-------------------+------------------+
+       |                  |                   |                  |
+       v                  v                   v                  v
+  /rnd:plan          /rnd:decide        /rnd:validate     (heavier flows
+       |                  |                   |          delegate here)
+   small → skip       small → skip      [assumption-...]
+   std/lg →           std → [assumption  [antipattern-..]
+   [plan-verif]              -challenging]  [plan-verif]
+   1-loop, BLOCKERs   lg → above +        [validation-reports]
+   only               [antipattern-...]   8-section, 3 loops
 ```
 
 ### Assumption Categories

@@ -11,16 +11,34 @@ argument-hint: [decision description]
 ## Context Loading
 
 Read prior context from `.rnd/`:
-- `.rnd/spec/spec.md` — requirements that constrain the decision
+- `.rnd/spec/spec.md` — requirements that constrain the decision (also: spec frontmatter `scope` field as fallback scope source)
 - `.rnd/research/` — research findings relevant to the decision
 - `.rnd/decisions/` — existing decisions (avoid contradictions)
-- `.rnd/architecture/current.md` — current architecture constraints
+- `.rnd/architecture/current.md` — current architecture constraints (also: arch header `scope` field as primary scope source)
 
-## Skill Loading
+## Scope Gate (mandatory)
 
-Load the `rnd-critic` skill for assumption-challenging frameworks. Reference:
-- `skills/rnd-critic/reference/assumption-challenging.md` — for surfacing hidden assumptions
-- `skills/rnd-critic/reference/antipattern-detection.md` — for detecting decision anti-patterns
+Read the scope assessment from the top of `.rnd/architecture/current.md` (small / standard / large). If absent, fall back to the `scope` field in `.rnd/spec/spec.md` frontmatter. If neither is present, default to **standard** and print a one-line warning.
+
+If both are absent and `$ARGUMENTS` clearly describes a tiny decision (file naming, variable choice, log format), the user may explicitly invoke at small scope by appending `--small` to `$ARGUMENTS`.
+
+Scope controls how much adversarial machinery loads and what shape the ADR takes:
+
+| Scope | References loaded | Decision process | ADR shape |
+|---|---|---|---|
+| **Small** | (none) | Skip Phase 4 (Challenge Assumptions); minimal Phase 3 | Slim ADR (Context · Decision · Trade-off · Revisit) |
+| **Standard** | `assumption-challenging.md` only | Compact Phase 4 — surface top 3-5 assumptions | Full ADR (current shape) |
+| **Large** | `assumption-challenging.md` + `antipattern-detection.md` | Full Phase 4 — all 5 assumption categories + antipattern catalog | Full ADR + antipattern review section |
+
+For heavier adversarial review at any scope, the user can run `/rnd:validate` on the decision explicitly — that's where the full critic skill loads.
+
+## Skill Loading (scope-gated)
+
+Load the `rnd-critic` skill scaffold (cheap — the SKILL.md header alone). Then per the table above:
+
+- **Small** → do not load reference files. The decision is small enough that the clarifying questions + a single round of reasoning is sufficient.
+- **Standard** → load `skills/rnd-critic/reference/assumption-challenging.md` only.
+- **Large** → load `skills/rnd-critic/reference/assumption-challenging.md` + `skills/rnd-critic/reference/antipattern-detection.md`.
 
 ## Decision Process
 
@@ -28,7 +46,7 @@ The decision to make: **$ARGUMENTS**
 
 ### Phase 1: Frame
 - What exactly is being decided?
-- What are the options? (minimum 2, ideally 3+)
+- What are the options? (small: 1-2 is fine if obvious; standard/large: minimum 2, ideally 3+)
 - What's the decision criteria? (cost, speed, reliability, team fit, lock-in)
 
 ### Phase 2: Clarify Constraints
@@ -40,6 +58,8 @@ Ask the user about:
 - Compliance or regulatory requirements
 - Risk tolerance
 
+**Small scope:** ask only the 2-3 constraints most relevant; don't run the full slate.
+
 ### Phase 3: Analyze Options
 For each option, evaluate:
 - **TCO** (Total Cost of Ownership) — not just license/infra cost, but operational burden, training, migration
@@ -49,11 +69,13 @@ For each option, evaluate:
 - **Lock-in** — how hard is it to switch later?
 - **Risk** — what's the worst case? How likely?
 
-### Phase 4: Challenge Assumptions
-Apply the rnd-critic skill's assumption-challenging framework:
-- Surface implicit assumptions in each option
-- Test assumptions against evidence
-- Identify wishful thinking
+**Small scope:** condense to TCO + Lock-in + Risk only. The other dimensions rarely change the answer at small scale.
+
+### Phase 4: Challenge Assumptions (scope-gated)
+
+- **Small** → skip. Tiny decisions don't warrant adversarial framework load.
+- **Standard** → apply `assumption-challenging.md` to surface the top 3-5 assumptions. Use the Reality Check and Stress Test patterns. Skip the full category sweep.
+- **Large** → apply `assumption-challenging.md` across all 5 categories (Timeline, Resource, Technical, Business, External) AND apply `antipattern-detection.md` to scan for matching anti-patterns in the proposed direction.
 
 ### Phase 5: Deliver Recommendation
 Present a clear recommendation with:
@@ -64,9 +86,39 @@ Present a clear recommendation with:
 
 ## Output
 
-Save as an Architecture Decision Record (ADR) to `.rnd/decisions/NNN-{slug}.md`:
+Save as an Architecture Decision Record (ADR) to `.rnd/decisions/NNN-{slug}.md`. The shape depends on scope.
+
+### Small-scope ADR (slim)
 
 ```markdown
+---
+scope: small
+---
+
+# ADR-NNN: {Decision Title}
+
+**Status:** Accepted — {today's date}
+
+## Context
+{1-2 sentences — what prompted this}
+
+## Decision
+{What was decided and why, 1-3 sentences}
+
+## Trade-off
+{What we sacrificed by choosing this}
+
+## Revisit
+{When to reconsider — concrete trigger}
+```
+
+### Standard / Large ADR (full)
+
+```markdown
+---
+scope: standard | large
+---
+
 # ADR-NNN: {Decision Title}
 
 ## Status
@@ -94,10 +146,12 @@ Accepted — {today's date}
 {When should this decision be reconsidered}
 ```
 
-Update `.rnd/decisions/index.md` with the new entry.
+**Large-scope only:** append a `## Adversarial Review` section summarizing the assumption-challenging + antipattern findings (top 3-5 of each).
+
+Update `.rnd/decisions/index.md` with the new entry (table columns work for both slim + full ADRs).
 
 ## Persistence
 
 Update `.rnd/state.md`:
-- Add entry to Recent Activity: `{today's date}: Decision recorded — ADR-NNN: {title} → .rnd/decisions/NNN-{slug}.md`
+- Add entry to Recent Activity: `{today's date}: Decision recorded — ADR-NNN: {title} (scope: {small|standard|large}) → .rnd/decisions/NNN-{slug}.md`
 - Follow compression protocol: keep under 120 lines, compress oldest Recent Activity entries into History phase summaries when exceeding 15 entries. Never delete entries.
