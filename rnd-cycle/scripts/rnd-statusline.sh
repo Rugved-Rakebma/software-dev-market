@@ -196,7 +196,7 @@ if [ "$PLAN_COUNT" -gt 0 ]; then
   [ -n "$SEGMENTS" ] && SEGMENTS+="${SEP}"
   SEGMENTS+="${WHITE}📐 ${PLAN_COUNT} plans${RESET}"
   if [ "$PENDING_PLANS" -gt 0 ]; then
-    SEGMENTS+=" ${DIM}[${PENDING_PLANS} pending]${RESET}"
+    SEGMENTS+=" ${DIM}(${PENDING_PLANS} pending)${RESET}"
   fi
 fi
 if [ "$BACKLOG_TOTAL" -gt 0 ]; then
