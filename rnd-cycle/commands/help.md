@@ -30,7 +30,6 @@ Print this reference card:
 | /rnd:decide       | Technology decisions (ADRs)                   |
 | /rnd:design       | Architecture + roadmap                        |
 | /rnd:plan         | Decompose into build plans (from spec)        |
-| /rnd:claude-plan  | Plan using native plan mode (codebase-aware)  |
 | /rnd:validate     | Stress-test any plan or proposal              |
 
 ### Code (build & verify)

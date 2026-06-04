@@ -218,7 +218,6 @@ Previous architecture is automatically archived. Decisions stay locked unless ex
 | `/rnd:decide` | Technology decisions — produces Architecture Decision Records |
 | `/rnd:design` | System architecture with roadmap and technology justification |
 | `/rnd:plan` | Decompose architecture into executable build plans with waves |
-| `/rnd:claude-plan` | Plan using native plan mode (codebase-aware), then decompose |
 | `/rnd:validate` | Adversarial stress-test of any plan, proposal, or roadmap |
 
 ### Code — Build and Verify
@@ -285,8 +284,7 @@ Everything persists in `.rnd/` at the project root. New sessions auto-load conte
 │   └── {date}-{target}.md      # Audit reports (codebase or document)
 ├── build/
 │   ├── plans/phase-NN/         # Executable plans with YAML frontmatter
-│   ├── progress.md             # Build completion status
-│   └── master-plan.md          # Native plan mode output (if using /rnd:claude-plan)
+│   └── progress.md             # Build completion status
 ├── debug/
 │   ├── {issue}/session.md      # Hypothesis tracking, experiment results
 │   └── knowledge-base.md       # Resolved patterns for future reference
