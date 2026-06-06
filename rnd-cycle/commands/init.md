@@ -3,7 +3,44 @@ description: Initialize R&D project — create .rnd/ skeleton, configure status 
 argument-hint: [project name]
 ---
 
-## Step 0 — Check if Already Initialized
+## Step 0 — Verify Git Repository
+
+**FIRST**: run `git rev-parse --git-dir 2>/dev/null` via Bash.
+
+If it **fails** (project is not a git repo):
+
+1. Run `git init -b main` (use `main`, never `master`)
+2. Run `git commit --allow-empty -m "Initial commit"` (creates a HEAD so worktrees can branch from it)
+3. **STOP — do NOT proceed to any later step.** Print:
+
+   ```
+   ━━━ Git Initialized ━━━
+
+   This directory was not a git repository. /rnd:c-build spawns worktree-
+   isolated agents which require a git repo. I just ran:
+
+     git init -b main
+     git commit --allow-empty -m "Initial commit"
+
+   ⚠️  You must restart Claude Code before continuing.
+
+   The current session cached "no git repo" at startup and won't refresh
+   mid-session, even though .git/ now exists. Without a restart, every
+   /rnd:c-build coder spawn will still fail with "not in a git repository".
+
+   Restart:
+     1. /exit
+     2. claude
+     3. /rnd:init   (will skip this step automatically and continue)
+   ```
+
+4. Exit the command. Do not create `.rnd/`, do not run later steps.
+
+If `git rev-parse --git-dir` succeeds, continue to Step 1.
+
+> **Why this exists**: Claude Code caches `is_git_repo` at session start. On a brand-new project, the user opens `claude` *before* running `/rnd:init`, so the cache is `false`. The SessionStart hook (`scripts/rnd-session-start.sh`) auto-inits git for already-managed projects (those with `.rnd/`), but on a *first* `/rnd:init` there's no `.rnd/` yet, so the hook is silent. This step closes that gap. One restart, then never again.
+
+## Step 1 — Check if Already Initialized
 
 If `.rnd/` already exists, DO NOT overwrite any files. Instead:
 - Skip skeleton creation
@@ -12,7 +49,7 @@ If `.rnd/` already exists, DO NOT overwrite any files. Instead:
 - Show the onboarding report with current project state
 - This makes init safe to re-run — it's additive, never destructive
 
-## Step 1 — Create `.rnd/` Skeleton
+## Step 2 — Create `.rnd/` Skeleton
 
 Only if `.rnd/` doesn't exist. Create:
 
@@ -37,7 +74,7 @@ Only if `.rnd/` doesn't exist. Create:
 
 The backlog directory holds frontmatter-yaml items; the schema is defined in `commands/backlog.md` and auto-populated by `/rnd:c-run` Stage 8.4. Manual items can be created via `/rnd:backlog add` (interactively prompts for the required fields).
 
-## Step 2 — Initialize State Files
+## Step 3 — Initialize State Files
 
 **`.rnd/state.md`:**
 ```markdown
@@ -61,7 +98,7 @@ Initialized. No spec, architecture, or build plans yet.
 |---|------|----------|------|
 ```
 
-## Step 3 — Configure Status Line
+## Step 4 — Configure Status Line
 
 The session-start hook is registered automatically via the plugin's `hooks/hooks.json` — no manual configuration needed.
 
@@ -81,7 +118,7 @@ The `ls | tail -1` pattern picks the latest version if multiple are cached, prev
 
 If the file already exists, merge this setting — don't overwrite existing settings.
 
-## Step 4 — Onboarding Report
+## Step 5 — Onboarding Report
 
 Print:
 

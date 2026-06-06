@@ -16,6 +16,20 @@ if [ ! -d "$RND_DIR" ]; then
   exit 0
 fi
 
+# --- Auto-init git if missing ---
+# Claude Code caches is_git_repo at session start. If .git/ is missing here,
+# every agent with `isolation: worktree` (e.g. rnd-coder) will fail with
+# "not in a git repository" for the entire session. Fix it at the earliest
+# possible hook point. Scope is intentionally narrow: only managed projects
+# (those with .rnd/), only when git is genuinely missing.
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  if git init -b main >/dev/null 2>&1 && \
+     git commit --allow-empty -m "Initial commit" --quiet 2>/dev/null; then
+    echo "🔧 git auto-initialized (required for agent worktree isolation)"
+    echo ""
+  fi
+fi
+
 # --- Parse session data ---
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
 MODEL=$(echo "$INPUT" | jq -r '.model.display_name // "unknown"' 2>/dev/null)
