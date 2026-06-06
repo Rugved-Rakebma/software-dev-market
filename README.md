@@ -1,6 +1,6 @@
 # rnd — Project Lifecycle for Claude Code
 
-10 specialized agents, persistent state, zero context loss between sessions.
+11 specialized agents, persistent state, zero context loss between sessions.
 
 ```
 /plugin marketplace add Rugved-Rakebma/software-dev-market
@@ -230,6 +230,7 @@ Previous architecture is automatically archived. Decisions stay locked unless ex
 ### Meta
 | Command | What It Does |
 |---------|-------------|
+| `/rnd:arch-docs` | Derive `/docs/arch/` from an existing codebase (Prime → Plan → Investigate → Synthesize) |
 | `/rnd:audit` | Deep analysis of codebases or documents (routes by target type) |
 | `/rnd:backlog` | Manage discovered issues — add, list, close, promote |
 | `/rnd:status` | Project state, artifact inventory, backlog summary, next steps |
@@ -258,6 +259,7 @@ Previous architecture is automatically archived. Decisions stay locked unless ex
 | **rnd-code-reviewer** | Two-layer review: tactical quality + integration wiring verification |
 | **rnd-code-analyst** | Codebase audit, 4-level verification, security review (STRIDE + OWASP) |
 | **rnd-code-debugger** | Scientific-method debugging with 8 techniques and persistent sessions |
+| **rnd-domain-investigator** | Read-only evidence gathering per domain for `/rnd:arch-docs` |
 
 Code and non-code agents never cross domains.
 
@@ -278,8 +280,12 @@ Everything persists in `.rnd/` at the project root. New sessions auto-load conte
 │   ├── index.md                # Decision log table
 │   └── NNN-{slug}.md           # Individual ADRs (locked constraints)
 ├── architecture/
-│   ├── current.md              # Active architecture design
+│   ├── current.md              # Active architecture design (from /rnd:design)
 │   └── history/                # Previous versions (auto-archived on redesign)
+├── arch-docs/                  # Bootstrap working state (from /rnd:arch-docs)
+│   ├── codebase-survey.md      # Phase 0 survey
+│   ├── plan.md                 # Phase 1 plan (domains + rationale)
+│   └── investigations/         # Phase 2 per-domain evidence reports
 ├── audit/
 │   └── {date}-{target}.md      # Audit reports (codebase or document)
 ├── build/

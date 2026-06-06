@@ -40,14 +40,15 @@ Print this reference card:
 | /rnd:c-debug   | Scientific debugging with session persistence  |
 
 ### Meta
-| Command        | What It Does                                   |
-|----------------|------------------------------------------------|
-| /rnd:audit     | Deep analysis of code or documents             |
-| /rnd:backlog   | Manage discovered issues (add/list/close/promote/sweep) |
-| /rnd:status    | Show project state and next steps              |
-| /rnd:help      | This reference card                            |
+| Command         | What It Does                                          |
+|-----------------|-------------------------------------------------------|
+| /rnd:arch-docs  | Derive /docs/arch/ from an existing codebase          |
+| /rnd:audit      | Deep analysis of code or documents                    |
+| /rnd:backlog    | Manage discovered issues (add/list/close/promote/sweep)|
+| /rnd:status     | Show project state and next steps                     |
+| /rnd:help       | This reference card                                   |
 
-## Agents (10)
+## Agents (11)
 
 ### Non-Code Domain
 | Agent          | Role                                           |
@@ -59,22 +60,25 @@ Print this reference card:
 | rnd-researcher | Autonomous 8-phase research pipeline           |
 
 ### Code Domain
-| Agent                 | Role                                      |
-|-----------------------|-------------------------------------------|
-| rnd-coder             | Plan implementation, commits per task     |
-| rnd-code-spec-checker | Adversarial spec compliance verification  |
-| rnd-code-reviewer     | Quality review + integration wiring       |
-| rnd-code-debugger     | Scientific debugging with session state   |
-| rnd-code-analyst      | Codebase audit, security, verification    |
+| Agent                    | Role                                       |
+|--------------------------|--------------------------------------------|
+| rnd-coder                | Plan implementation, commits per task      |
+| rnd-code-spec-checker    | Adversarial spec compliance verification   |
+| rnd-code-reviewer        | Quality review + integration wiring        |
+| rnd-code-debugger        | Scientific debugging with session state    |
+| rnd-code-analyst         | Codebase audit, security, verification     |
+| rnd-domain-investigator  | Read-only evidence gathering for arch docs |
 
-## Skills (5)
-| Skill         | Purpose                                        |
-|---------------|------------------------------------------------|
-| rnd-architect | Architecture patterns, tech selection, roadmaps|
-| rnd-critic    | Assumption challenging, anti-pattern detection  |
-| rnd-analyst   | Audit methodology, verification, code review   |
-| rnd-build     | Planning, execution, wave orchestration        |
-| rnd-research  | 8-phase research pipeline, citation tracking   |
+## Skills (7)
+| Skill          | Purpose                                          |
+|----------------|--------------------------------------------------|
+| rnd-architect  | Architecture patterns, tech selection, roadmaps  |
+| rnd-arch-docs  | Bootstrap arch docs from existing codebase       |
+| rnd-critic     | Assumption challenging, anti-pattern detection   |
+| rnd-analyst    | Audit methodology, verification, code review    |
+| rnd-build      | Planning, execution, wave orchestration          |
+| rnd-research   | 8-phase research pipeline, citation tracking     |
+| rnd-runner     | End-to-end wave automation, worktree merge       |
 
 ## .rnd/ State Directory
 ```
@@ -84,8 +88,10 @@ Print this reference card:
 ├── research/             # Research summaries
 ├── decisions/            # ADRs (Architecture Decision Records)
 │   └── index.md
-├── architecture/         # Architecture documents
+├── architecture/         # Architecture documents (design-time, via /rnd:design)
 │   └── history/
+├── arch-docs/            # Bootstrap working state (survey, plan, investigations)
+│   └── investigations/
 ├── audit/                # Audit reports
 ├── build/                # Build plans and progress
 │   └── plans/
