@@ -1,6 +1,6 @@
 # Worktree Merge
 
-Defines the git mechanics for `/rnd:c-run` Stage 3 (build merges) and Stage 6 (fix-up merges). `rnd-coder` runs with `isolation: worktree` (declared at `agents/rnd-coder.md`), which means each coder spawn produces an isolated git worktree on its own branch. Those branches need to reach `main`.
+Defines the git mechanics for `/rnd:c-run` Stage 3 (build merges) and Stage 6 (fix-up merges). `rnd-coder` runs with `isolation: worktree` (declared at `agents/rnd-coder.md`), which means each coder spawn produces an isolated git worktree on its own branch. Those branches need to reach the **trunk** — the branch HEAD was on when `/rnd:c-run` was invoked. The trunk can be any branch (not required to be `main`); it is captured at Stage 1 and recorded in the lock's `trunk:` frontmatter.
 
 ## Strategy: `git merge --no-ff`
 
@@ -65,7 +65,7 @@ After each successful merge:
 # Remove the worktree (deletes the isolated working directory)
 git worktree remove {worktree-path}
 
-# Delete the branch (it's been merged into main)
+# Delete the branch (it's been merged into the trunk)
 git branch -d feature/run-{run-id}-{plan-name}
 ```
 
@@ -101,35 +101,49 @@ Same rules apply. Differences:
 
 ## Pre-Flight Check (Stage 1)
 
-Before any worktree spawn, Stage 1 verifies:
+Before any worktree spawn, Stage 1 captures the **trunk** for this run and verifies state:
 
 ```bash
-# Are we on main?
-git rev-parse --abbrev-ref HEAD     # → main
+# Capture HEAD as the run's trunk. Recorded in lock frontmatter for resume safety.
+TRUNK=$(git rev-parse --abbrev-ref HEAD)
 
 # Is the working tree clean?
 git status --porcelain              # → empty
 
 # Are there any leftover worktrees from a prior aborted run?
-git worktree list                   # → only main; no feature/run-* or fix/run-* paths
+git worktree list                   # → only the trunk; no feature/run-* or fix/run-* paths
 ```
 
 If any check fails:
-- Dirty tree → PAUSE: "uncommitted changes on main; commit or stash before c-run"
-- Wrong branch → PAUSE: "currently on {branch}; check out main first"
+- Dirty tree → PAUSE: `"uncommitted changes on ${TRUNK}; commit or stash before c-run"`
 - Stale worktrees → present them; ask user to confirm cleanup or abort
+
+The trunk can be **any branch** — `/rnd:c-run` no longer requires you to be on `main`. Whatever branch HEAD is on at Stage 1 becomes the merge target for every Stage 3 / Stage 6 merge in this run, and gets recorded in the lock's `trunk:` frontmatter.
 
 ## Resume Behavior
 
 If a `c-run` is interrupted mid-merge (Stage 3 partially complete), resuming requires care:
 
+0. **Verify trunk hasn't moved.** Read the lock's `trunk:` frontmatter and compare to `git rev-parse --abbrev-ref HEAD`. If they differ, the user has switched branches between sessions — PAUSE and surface the discrepancy. Continuing would merge into the wrong branch.
 1. Read the lock — see which Stage 3 leaves are `[x]` and which are `[ ]` or `[~]`.
 2. Check git state: which branches still exist? `git branch | grep feature/run-{run-id}`.
-3. For branches whose lock leaf is `[x]`: should already be merged + deleted; verify with `git branch --merged main`.
+3. For branches whose lock leaf is `[x]`: should already be merged + deleted; verify with `git branch --merged {trunk}` (trunk = lock frontmatter value).
 4. For branches whose lock leaf is `[ ]`: the merge hasn't started; resume from there.
 5. For branches whose lock leaf is `[~]`: a merge was in progress when interrupted. Check `git status` for `MERGE_HEAD` — if present, the merge is half-done. PAUSE → user to either complete the in-flight merge manually or `git merge --abort` and retry.
 
-The resume contract: lock leaf state must match git state. If they diverge, escalate.
+The resume contract: lock leaf state must match git state, AND current HEAD must match the recorded trunk. If either diverges, escalate.
+
+## Scope of Git Operations — Local Only
+
+Every git operation in this document is **local**. `/rnd:c-run` never:
+
+- Runs `git push` or any remote-affecting command
+- Touches any branch except the trunk (captured at Stage 1) and the per-run `feature/run-*` / `fix/run-*` worktree branches (which it creates and deletes within the same run)
+- Touches your other feature branches, shared/release branches, or any remote refs
+
+This is intentional. The runner stops at the local trunk so you have room to manually test the merged result before deciding whether to push. **Pushing is always the user's call, never `c-run`'s.**
+
+If a future change to this skill or to any agent ever introduces a `git push`, `git remote`, or any remote-affecting command, that's a violation of this contract and must be removed.
 
 ## See Also
 

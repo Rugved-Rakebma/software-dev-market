@@ -8,7 +8,8 @@ argument-hint: [wave N | phase N | all]
 1. **Check `.rnd/` exists.** If not: "No R&D project found. Run `/rnd:init` first."
 2. **Read `.rnd/state.md`** for project context.
 3. **Check `.rnd/build/plans/` exists with plans matching `$ARGUMENTS` scope.** If not: "No build plans found for {scope}. Run `/rnd:plan` first."
-4. **Verify clean working tree** on the project's main branch (no uncommitted changes). If dirty: surface to user.
+4. **Verify clean working tree** (no uncommitted changes). The current branch becomes the run's **trunk** — `c-run` branches worktrees off it and merges back to it. Any branch is fine (you do NOT need to be on `main`). If dirty: surface to user.
+5. **Local-only guarantee**: `c-run` operates entirely on the local trunk and its per-run worktree branches. It never runs `git push`, never touches any other branch, never modifies remote state. After the run completes, you have room to manually test the trunk and decide whether to push. See `reference/worktree-merge.md` "Scope of Git Operations" for the full contract.
 
 ## Resume Check
 
@@ -56,7 +57,7 @@ Before generating the lock, scan `.rnd/backlog/` for open items whose `related-f
 
 Construct the lock file at `.rnd/build/runs/{run-id}.md` per `reference/lock-format.md`:
 
-1. **Frontmatter**: `run_id`, `scope`, `plans` (read from `.rnd/build/plans/` matching scope), `status: running`, `created`, `last-updated`, `fix_loop_count: 0`, `fix_loop_max: 2`.
+1. **Frontmatter**: `run_id`, `scope`, `trunk` (capture current HEAD via `git rev-parse --abbrev-ref HEAD` — recorded so Stages 3+6 know where to merge and resume can verify HEAD hasn't moved), `plans` (read from `.rnd/build/plans/` matching scope), `status: running`, `created`, `last-updated`, `fix_loop_count: 0`, `fix_loop_max: 2`.
 
 2. **Body**: write all 8 stages from the standard skeleton. For each stage:
    - Stage 1 (Pre-flight): static checks + backlog scan (surface items whose related-files overlap with this wave's plan files)
@@ -165,7 +166,7 @@ Per `reference/decision-policy.md`:
 #### Stage 3 — Merge worktrees (sequential)
 
 Follow `reference/worktree-merge.md`:
-1. Checkout `main`, verify clean.
+1. Checkout the trunk (lock frontmatter's `trunk:` value), verify clean.
 2. For each plan in dependency order: `git merge --no-ff {branch} -m "build({scope}): merge plan {name}"`.
 3. On conflict: `git merge --abort`, PAUSE per `decision-policy.md` (planner gap).
 4. After all merges: `git worktree remove {path}` + `git branch -d {branch}` per plan.
@@ -179,7 +180,7 @@ Three Agent tool spawns in parallel:
 **rnd-code-reviewer** — same.
 **rnd-code-analyst** — same.
 
-All three receive the files-changed list from Stage 2 + Stage 3 (effectively `git diff main~{N}..main --name-only` where N = number of merge commits).
+All three receive the files-changed list from Stage 2 + Stage 3 (effectively `git diff {trunk}~{N}..{trunk} --name-only` where `{trunk}` is the lock's trunk and N = number of merge commits).
 
 #### Stage 5 — Triage (in-session, ADAPTIVE)
 
