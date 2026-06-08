@@ -15,25 +15,26 @@ The four return statuses are defined in `rnd-build/reference/escalation-protocol
 
 ## Verifier Verdict Aggregation
 
-The three verifiers return different shapes (per `rnd-build/reference/handoff-contracts.md`). `c-run` Stage 5 must handle all three.
+`c-run` Stage 5 aggregates two verifier reports (per `rnd-build/reference/handoff-contracts.md`). `rnd-code-analyst` is intentionally NOT part of c-run's verify pipeline — opt in separately via `/rnd:audit` for STRIDE+OWASP review.
 
 | Agent | Returns | Notes |
 |---|---|---|
 | `rnd-code-spec-checker` | `verdict: PASS \| FAIL` + findings array | FAIL = REQ-blocker present. Each finding tagged BLOCKER or ADVISORY. |
 | `rnd-code-reviewer` | `verdict: PASS \| CONDITIONAL \| FAIL` + `blockers[]` + `advisories[]` + `integration_map[]` | PASS = no findings. CONDITIONAL = advisories only. FAIL = blockers present. |
-| `rnd-code-analyst` | `findings[]` + `summary` (no overall verdict) | Each finding tagged BLOCKER (high severity / security / broken contract) or ADVISORY (debt / polish). |
+
+### Proportionality gating
+
+For `proportionality: small`, Stages 4–7 are skipped entirely. No verifier reports collected; no triage; aggregation rule below does not run. Advisories surfaced by Stage 2 coders still route to Stage 8.4 backlog. For `standard` / `large`, the aggregation rule below applies.
 
 ### Aggregation rule
 
-After collecting all three reports, compute the run-level verdict:
+After collecting both reports, compute the run-level verdict:
 
 ```
-if spec_checker.verdict == FAIL:                  run_verdict = FAIL  # blockers present
-elif reviewer.verdict == FAIL:                    run_verdict = FAIL  # blockers present
-elif any(f.tag == 'BLOCKER' for f in analyst.findings):  run_verdict = FAIL
-elif reviewer.verdict == CONDITIONAL:             run_verdict = CONDITIONAL  # advisories only
-elif any(f.tag == 'ADVISORY' for f in analyst.findings):  run_verdict = CONDITIONAL
-else:                                             run_verdict = PASS
+if spec_checker.verdict == FAIL:        run_verdict = FAIL          # blockers present
+elif reviewer.verdict == FAIL:          run_verdict = FAIL          # blockers present
+elif reviewer.verdict == CONDITIONAL:   run_verdict = CONDITIONAL   # advisories only
+else:                                   run_verdict = PASS
 ```
 
 Then route by run_verdict:
@@ -143,7 +144,8 @@ For each `BACKLOG CANDIDATE` marker scanned from:
 | Coder advisories | Each coder report's Advisories section (Stage 2 + Stage 6) |
 | Spec-checker findings | Findings tagged ADVISORY |
 | Reviewer advisories | `advisories[]` array (all are backlog candidates) |
-| Analyst findings | Findings tagged ADVISORY |
+
+(Analyst findings are not a c-run source — `rnd-code-analyst` runs via `/rnd:audit`, which writes its own findings into the audit report directly.)
 
 **Step 1 — Dedup check.** Before creating a new file, scan existing open items in `.rnd/backlog/`. A match exists when ALL of:
 - Same `category`

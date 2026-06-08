@@ -39,7 +39,8 @@ Flat directory. One file per invocation. Permanent (no GC) — the run-id timest
 ```yaml
 ---
 run_id: wave-04-20260506-1432
-scope: wave 4                    # human-readable scope
+scope: wave 4                    # human-readable run target — wave N / phase N / all
+proportionality: standard        # small | standard | large — read from spec.md, drives verify pipeline gating
 trunk: feature/voice-mode        # branch HEAD was on at Stage 1 — merge target for Stages 3 + 6
 plans: [04-01-feed-ingestion, 04-02-feed-cache, 04-03-feed-renderer]
 status: running                  # running | complete | failed
@@ -51,6 +52,10 @@ fix_loop_max: 2                  # aligns with rnd-build escalation-protocol.md 
 ```
 
 `trunk` is captured per-run from `git rev-parse --abbrev-ref HEAD` at Stage 1.1. Can be any branch — `c-run` does NOT require you to be on `main`. The trunk is the merge target for every Stage 3 and Stage 6 merge; resume verifies HEAD still matches before continuing (see `worktree-merge.md` Resume Behavior).
+
+`proportionality` is captured per-run from `.rnd/spec/spec.md` frontmatter `scope:` (the v2.5 alignment field). Defaults to `small` if absent. Drives whether Stages 4–7 (verify pipeline) execute:
+- `small` → Stages 4–7 are pre-marked `[x] skipped — verify not load-bearing at small scope`. Execution jumps from Stage 3 to Stage 8. No verifier agents spawn. Stage 8.3 verification report is also skipped.
+- `standard` / `large` → existing behavior: Stages 4–7 run normally with spec-checker + reviewer (analyst is opt-in via `/rnd:audit`).
 
 ### Status enum (3 values, no others)
 
@@ -152,8 +157,10 @@ Each plan: spawn rnd-coder in worktree, then code-simplifier on its files (same 
 Scope: files touched in Stage 2.
 - [ ] 4.1 ▶ spawn rnd-code-spec-checker
 - [ ] 4.2 ▶ spawn rnd-code-reviewer
-- [ ] 4.3 ▶ spawn rnd-code-analyst
-- gate: all three reports collected
+- gate: both reports collected
+
+> **rnd-code-analyst is NOT spawned by c-run.** STRIDE+OWASP is heavyweight; opt in via `/rnd:audit` post-run.
+> **For `proportionality: small`, Stages 4–7 are pre-marked `[x] skipped` in Phase 1** and the run jumps from Stage 3 to Stage 8.
 
 ## Stage 5 — Triage (in-session, ADAPTIVE)
 Aggregate the three return shapes (each agent returns differently — see decision-policy.md).

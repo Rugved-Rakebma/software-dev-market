@@ -3,6 +3,17 @@ description: Automated end-to-end wave runner — generates a lock, executes 8 s
 argument-hint: [wave N | phase N | all]
 ---
 
+## When to Use `/rnd:c-run`
+
+Use `c-run` when verify is automatable (tests, golden outputs, spec-checkable behavior) AND you want autonomous completion. The verify-triage-fix loop earns its wall-time only when verify answers your real failure-mode question.
+
+Use **`/rnd:c-build`** instead when:
+- The project is UI / feel-based / animation-driven — the questions that matter ("does the eye animation feel right?", "does the layout work in-hand?") only surface on a real device, not from a verifier
+- The code is throwaway or prototype — heavy compliance is the wrong investment
+- The wave has 1–2 plans — manual worktree merging is cheaper than ceremony
+
+`c-run` automatically lightens itself for `scope: small` projects (verify pipeline skipped — see Proportionality below). But `c-build` is still the right call when verify itself isn't the question you're asking.
+
 ## Prerequisites
 
 1. **Check `.rnd/` exists.** If not: "No R&D project found. Run `/rnd:init` first."
@@ -10,6 +21,7 @@ argument-hint: [wave N | phase N | all]
 3. **Check `.rnd/build/plans/` exists with plans matching `$ARGUMENTS` scope.** If not: "No build plans found for {scope}. Run `/rnd:plan` first."
 4. **Verify clean working tree** (no uncommitted changes). The current branch becomes the run's **trunk** — `c-run` branches worktrees off it and merges back to it. Any branch is fine (you do NOT need to be on `main`). If dirty: surface to user.
 5. **Local-only guarantee**: `c-run` operates entirely on the local trunk and its per-run worktree branches. It never runs `git push`, never touches any other branch, never modifies remote state. After the run completes, you have room to manually test the trunk and decide whether to push. See `reference/worktree-merge.md` "Scope of Git Operations" for the full contract.
+6. **Read project proportionality** from `.rnd/spec/spec.md` frontmatter `scope: small|standard|large`. Default to `small` if absent. Recorded in the lock as `proportionality:` and drives whether Stages 4–7 (verify pipeline) execute or are pre-marked skipped. See "Proportionality Gating" below.
 
 ## Resume Check
 
@@ -57,19 +69,21 @@ Before generating the lock, scan `.rnd/backlog/` for open items whose `related-f
 
 Construct the lock file at `.rnd/build/runs/{run-id}.md` per `reference/lock-format.md`:
 
-1. **Frontmatter**: `run_id`, `scope`, `trunk` (capture current HEAD via `git rev-parse --abbrev-ref HEAD` — recorded so Stages 3+6 know where to merge and resume can verify HEAD hasn't moved), `plans` (read from `.rnd/build/plans/` matching scope), `status: running`, `created`, `last-updated`, `fix_loop_count: 0`, `fix_loop_max: 2`.
+1. **Frontmatter**: `run_id`, `scope` (the run target — `wave N` / `phase N` / `all`), `proportionality` (read from `.rnd/spec/spec.md` `scope:` field, default `small`), `trunk` (capture current HEAD via `git rev-parse --abbrev-ref HEAD` — recorded so Stages 3+6 know where to merge and resume can verify HEAD hasn't moved), `plans` (read from `.rnd/build/plans/` matching scope), `status: running`, `created`, `last-updated`, `fix_loop_count: 0`, `fix_loop_max: 2`.
 
 2. **Body**: write all 8 stages from the standard skeleton. For each stage:
    - Stage 1 (Pre-flight): static checks + backlog scan (surface items whose related-files overlap with this wave's plan files)
    - Stage 2 (Build + Simplify): one leaf per plan, with the plan name and the worktree branch name `feature/run-{run-id}-{plan-name}`
    - Stage 3 (Merge): one merge leaf per plan, ordered by plan dependencies (read each plan's frontmatter for deps); plus delete + checkpoint commit leaves
-   - Stage 4 (Verify): three fixed leaves (spec-checker, reviewer, analyst)
+   - Stage 4 (Verify): two fixed leaves (spec-checker, reviewer). Analyst is NOT spawned — opt-in via `/rnd:audit` post-run.
    - Stage 5 (Triage): tagged `[ADAPTIVE]`; placeholder leaves for "collect verdicts," "categorize findings," "record triage decision"
    - Stage 6 (Fix-up): tagged `[CONDITIONAL — only if Stage 5 categorized to-fix items, ADAPTIVE]`; placeholder leaves
    - Stage 7 (Re-verify): tagged `[CONDITIONAL — only if Stage 6 ran]`; two fixed leaves (spec-checker, reviewer)
    - Stage 8 (Finalize): six static leaves (progress, state, verifications, backlog dedup+create with origin tags, backlog auto-close-on-fix, mark complete)
 
-3. **Gates**: write a `gate:` line at the end of every stage per `reference/lock-format.md`.
+3. **Proportionality Gating** (B): if `proportionality: small`, pre-mark ALL leaves in Stages 4, 5, 6, 7 as `[x] skipped — verify not load-bearing at small scope`. Set each stage's gate to `gate: skipped`. Execution jumps from Stage 3 directly to Stage 8. No verifier agents spawn. Stage 8.3 (verification report) is also skipped.
+
+4. **Gates**: write a `gate:` line at the end of every stage per `reference/lock-format.md`.
 
 ## Phase 2 — Present + Approve
 
@@ -174,13 +188,16 @@ Follow `reference/worktree-merge.md`:
 
 #### Stage 4 — Verify (parallel)
 
-Three Agent tool spawns in parallel:
+**Skipped entirely** if `proportionality: small` (Stages 4–7 pre-marked `[x] skipped` in Phase 1; execution jumps to Stage 8).
+
+Otherwise, **two** Agent tool spawns in parallel:
 
 **rnd-code-spec-checker** — see `commands/c-verify.md` for the established prompt structure.
 **rnd-code-reviewer** — same.
-**rnd-code-analyst** — same.
 
-All three receive the files-changed list from Stage 2 + Stage 3 (effectively `git diff {trunk}~{N}..{trunk} --name-only` where `{trunk}` is the lock's trunk and N = number of merge commits).
+Both receive the files-changed list from Stage 2 + Stage 3 (effectively `git diff {trunk}~{N}..{trunk} --name-only` where `{trunk}` is the lock's trunk and N = number of merge commits).
+
+**`rnd-code-analyst` is intentionally NOT part of c-run's default verify.** STRIDE+OWASP audit is heavyweight and only load-bearing for production-bound services. For security/audit review, run `/rnd:audit` on this run's diff after c-run completes — see After Completion below.
 
 #### Stage 5 — Triage (in-session, ADAPTIVE)
 
@@ -226,7 +243,7 @@ Gate per `reference/decision-policy.md`:
 2. **Update `.rnd/state.md`** Recent Activity:
    - `{today's date}: Run {run-id} via /rnd:c-run — {scope}, {N} plans, run verdict: {PASS|CONDITIONAL|FAIL}, fix loops: {fix_loop_count}`
    - Follow compression protocol: keep under 120 lines, compress oldest Recent Activity entries into History phase summaries when exceeding 15 entries. Never delete entries.
-3. **Write `.rnd/verifications/{scope}-{date}.md`** — consolidated verdict report from Stages 4 + 7 (use the same template as `/rnd:c-verify`).
+3. **Write `.rnd/verifications/{scope}-{date}.md`** — consolidated verdict report from Stages 4 + 7 (use the same template as `/rnd:c-verify`). **Skipped if `proportionality: small`** (no verify ran, no report to write).
 4. **Backlog dedup + create**: scan all sources per `reference/decision-policy.md` Backlog Routing → Stage 8.4:
    - Coder concerns from Stages 2 + 6
    - Verifier findings flagged BACKLOG CANDIDATE or routed as nit
@@ -251,10 +268,12 @@ Backlog items created: {N}
 Artifacts:
   Lock: .rnd/build/runs/{run-id}.md (status: complete)
   Progress: .rnd/build/progress.md (per-plan entries appended to ## Completed)
-  Verification: .rnd/verifications/{scope}-{date}.md
+  Verification: .rnd/verifications/{scope}-{date}.md     ← omitted if proportionality: small
   Backlog: {paths if any created}
 
-Next: review the verification report, then `/rnd:c-run` next wave.
+Next:
+  - For security/audit review, run `/rnd:audit` on this run's diff.
+  - Review the verification report (if present), then `/rnd:c-run` next wave.
 ```
 
 ## On Failure or Abort

@@ -29,7 +29,8 @@ Includes:
 
 Includes:
 - Coder status handling (`DONE` / `DONE_WITH_ADVISORIES` / `BLOCKED` / `NEEDS_CONTEXT`)
-- Verifier verdict aggregation across the three different return shapes
+- Verifier verdict aggregation across the two verifier return shapes (spec-checker + reviewer; analyst is opt-in via `/rnd:audit`)
+- Proportionality gating: `scope: small` skips Stages 4–7 entirely
 - Finding triage: BLOCKER (mechanical) / BLOCKER (judgment-call) / ADVISORY
 - The "mechanical vs judgment-call" decision rule for blockers
 - Full pause-trigger list with pause format
@@ -67,13 +68,14 @@ Includes:
 | `NEEDS_CONTEXT` | PAUSE → user |
 
 ### Verifier Aggregation
-| Spec-checker | Reviewer | Analyst | Run verdict |
-|---|---|---|---|
-| FAIL | * | * | FAIL |
-| * | FAIL | * | FAIL |
-| PASS | CONDITIONAL | * | CONDITIONAL |
-| PASS | PASS | any high-severity finding | CONDITIONAL |
-| PASS | PASS | no high findings | PASS |
+| Spec-checker | Reviewer | Run verdict |
+|---|---|---|
+| FAIL | * | FAIL |
+| * | FAIL | FAIL |
+| PASS | CONDITIONAL | CONDITIONAL |
+| PASS | PASS | PASS |
+
+(Analyst is not part of c-run. Run `/rnd:audit` separately for STRIDE+OWASP review.)
 
 ### Finding Triage
 | Category | Routing |
@@ -88,10 +90,10 @@ Includes:
 | 1 | Pre-flight | sequential, in-session |
 | 2 | Build + Simplify | parallel per plan |
 | 3 | Merge worktrees | sequential |
-| 4 | Verify | parallel |
-| 5 | Triage | in-session, ADAPTIVE |
-| 6 | Fix-up | CONDITIONAL, ADAPTIVE |
-| 7 | Re-verify | CONDITIONAL |
+| 4 | Verify | parallel (2 verifiers; skipped for `proportionality: small`) |
+| 5 | Triage | in-session, ADAPTIVE (skipped for `proportionality: small`) |
+| 6 | Fix-up | CONDITIONAL, ADAPTIVE (skipped for `proportionality: small`) |
+| 7 | Re-verify | CONDITIONAL (skipped for `proportionality: small`) |
 | 8 | Finalize | sequential |
 
 ## Boundary with `rnd-build`
@@ -117,14 +119,19 @@ Clean separation, no overlap:
 User reviews + approves the lock
     |
     v
-Stage 1 (Pre-flight)  -> in-session checks
+Stage 1 (Pre-flight)  -> in-session checks (capture trunk + proportionality)
 Stage 2 (Build+Simp)  -> parallel rnd-coder + code-simplifier per plan, in worktrees
 Stage 3 (Merge)       -> [worktree-merge] sequential no-ff merges, escalate conflicts
-Stage 4 (Verify)      -> parallel 3 verifiers
+Stage 4 (Verify)      -> parallel 2 verifiers (spec-checker + reviewer)
+                         [SKIPPED if proportionality: small]
 Stage 5 (Triage)      -> [decision-policy] aggregate, categorize, route findings
+                         [SKIPPED if proportionality: small]
 Stage 6 (Fix-up)      -> conditional, ADAPTIVE; spawn coders for fixes
+                         [SKIPPED if proportionality: small]
 Stage 7 (Re-verify)   -> conditional; max 2 loops
+                         [SKIPPED if proportionality: small]
 Stage 8 (Finalize)    -> progress.md, state.md, verifications/, backlog/
+                         (suggests /rnd:audit for security review)
     |
     v
 status: complete; lock left as audit trail
