@@ -1,6 +1,6 @@
 {
   "name": "rnd",
-  "version": "2.5.0",
+  "version": "2.7.0",
   "description": "R&D lifecycle system — structured spec, research, planning, build, verification, and debugging with 11 specialized agents, 7 skills, and 16 commands",
   "author": {
     "name": "Rugved Ambekar",
