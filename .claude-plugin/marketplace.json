@@ -9,7 +9,7 @@
       "name": "rnd",
       "source": "./rnd-cycle/",
       "description": "R&D lifecycle system — structured spec, research, planning, build, verification, and debugging with 11 specialized agents, 7 skills, and 16 commands",
-      "version": "2.7.0"
+      "version": "2.7.1"
     }
   ]
 }
