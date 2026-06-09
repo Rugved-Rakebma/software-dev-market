@@ -30,6 +30,14 @@ Waves execute sequentially — wave 2 starts only after wave 1 is fully complete
 
 All plans within a wave execute in parallel.
 
+**Pre-spawn isolation snapshot** (run via Bash before spawning any wave coders):
+
+```bash
+WAVE_WORKTREE_BASELINE=$(git worktree list | wc -l)
+```
+
+Remember this value for the post-spawn verification in step 3 below. Required because the Claude Code harness has been observed silently bypassing `isolation: worktree` (agents run in shared cwd instead of isolated worktrees, with no error surfaced). The check below catches that.
+
 For each plan:
 
 **1. Spawn rnd-coder via the Agent tool:**
@@ -44,16 +52,42 @@ For each plan:
 This three-block bundling implements the **Plan = task / Arch = shape / Spec = reqs** separation: plans stay slim because the coder receives the shape and requirements alongside the task.
 
 **2. Collect coder's status report:**
-- **DONE** or **DONE_WITH_ADVISORIES** → continue (advisories route to backlog in step 4)
+- **DONE** or **DONE_WITH_ADVISORIES** → continue (advisories route to backlog after all waves complete — see "After All Waves" below)
 - **BLOCKED** or **NEEDS_CONTEXT** → surface to user, pause execution, wait for resolution
 
-**3. Spawn code-simplifier via the Agent tool:**
+**3. Circuit breaker — verify isolation actually happened** (run via Bash AFTER all coders in the wave have returned, BEFORE any code-simplifier runs):
+
+```bash
+NEW_WORKTREES=$(($(git worktree list | wc -l) - WAVE_WORKTREE_BASELINE))
+```
+
+Expected: `NEW_WORKTREES` equals the number of plans in this wave. If less, the harness silently bypassed `isolation: worktree` for at least one spawn — coders ran in the shared working tree, commits collided, attribution is wrong.
+
+**PAUSE — do not run code-simplifier, do not proceed to the next wave.** Print:
+
+```
+❌ Worktree isolation failed silently for {missing}/{total} plans in this wave.
+Agents ran in the shared working tree — commits collided, attribution is wrong.
+
+Diagnostic:
+  git worktree list          # only main → harness bypassed isolation
+  git branch -a | grep run-  # should show feature/run-* — empty = bypassed
+  git log --oneline -10      # what landed where
+
+This is a Claude Code harness-level issue (`isolation: worktree` silently
+falls back to shared cwd in some configurations). Halt c-build. Investigate
+or restart the Claude Code session before continuing.
+```
+
+If the check passes (`NEW_WORKTREES` == plan count), proceed to step 4.
+
+**4. Spawn code-simplifier via the Agent tool:**
 - **description**: "Simplify: {plan name} files"
 - Target the files changed by the coder (from the coder's report)
 
 ### Wave Gate
 
-All plans in the wave must complete before proceeding to the next wave.
+All plans in the wave must complete (including the step 3 isolation check) before proceeding to the next wave.
 
 ### Progress Tracking
 

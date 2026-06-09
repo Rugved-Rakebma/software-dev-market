@@ -156,6 +156,14 @@ After all leaves in a stage are complete, evaluate the `gate:` line:
 
 #### Stage 2 — Build + Simplify (per plan, parallel)
 
+**Pre-spawn isolation snapshot** (run via Bash before spawning Stage 2 coders):
+
+```bash
+STAGE2_WORKTREE_BASELINE=$(git worktree list | wc -l)
+```
+
+Required because the Claude Code harness has been observed silently bypassing `isolation: worktree` (agents run in shared cwd, no error surfaced). The post-spawn check in the Stage 2 gate catches that.
+
 For each plan in the wave:
 
 **Spawn rnd-coder via the Agent tool:**
@@ -176,6 +184,29 @@ The coder runs in worktree isolation (declared in `agents/rnd-coder.md`); the sp
 Per `reference/decision-policy.md`:
 - `DONE` / `DONE_WITH_ADVISORIES` → continue, queue advisories for Stage 8 backlog
 - `BLOCKED` / `NEEDS_CONTEXT` → PAUSE
+
+**Stage 2 isolation check** (part of the Stage 2 gate — run via Bash after ALL coders return, before declaring the stage complete):
+
+```bash
+NEW_WORKTREES=$(($(git worktree list | wc -l) - STAGE2_WORKTREE_BASELINE))
+```
+
+Expected: `NEW_WORKTREES` equals the number of plans in the wave. If less, the harness silently bypassed `isolation: worktree`. **PAUSE — do not advance to Stage 3** (there are no per-plan branches to merge). Print the same diagnostic shown in `commands/c-build.md` "Per Plan in Wave" step 3:
+
+```
+❌ Worktree isolation failed silently for {missing}/{total} plans in this wave.
+Agents ran in the shared working tree — commits collided, attribution is wrong.
+
+Diagnostic:
+  git worktree list          # only main + trunk → harness bypassed isolation
+  git branch -a | grep run-  # should show feature/run-* — empty = bypassed
+  git log --oneline -10      # what landed where
+
+This is a Claude Code harness-level issue. Halt c-run. Investigate or
+restart the Claude Code session before continuing.
+```
+
+Mark the run's lock frontmatter `status: failed` with reason "isolation bypass detected at Stage 2". Do not advance.
 
 #### Stage 3 — Merge worktrees (sequential)
 

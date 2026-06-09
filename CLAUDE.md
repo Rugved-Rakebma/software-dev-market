@@ -34,6 +34,8 @@ The full v2 spec lives at `~/Code/rnd-lifecycle/rnd-v2.md`. That repo is the dev
 - **Init v1→v2 migration**: `/rnd:init` should migrate state.md headers (`Current Phase` → `Current Status`) on existing projects. Not yet implemented.
 - **Line 3 statusline** (phase detection): Deferred. Needs a standardized `phase:` field in state.md to be reliable across build cycles.
 - **Decision count**: Statusline counts decision FILES (correct), not individual decisions within files. By design — bash can't parse markdown tables every 10 seconds.
+- **Worktree isolation silent-bypass (root cause unknown)**: Claude Code's harness was observed silently bypassing `isolation: worktree` for parallel `rnd-coder` spawns — agents ran in the shared working tree, no error surfaced, commits collided. Circuit breaker added in c-build / c-run (Stage 2 gate via `git worktree list` count delta) catches this loudly. Open question: v2.7.0's SessionStart git auto-init may have flipped the prior *hard* failure ("Cannot create agent worktree: not in a git repository") into this *silent* one — verification pending on a true cold-session test. If confirmed, decide whether to gate the auto-init or accept it (circuit breaker makes the safety question moot from the user's standpoint).
+- **Case B worktree bypass detection**: Current circuit breaker catches Case A (worktree never created). Does NOT catch Case B (worktree created but agents use parent cwd via cwd-inheritance bug). Case B requires cross-tree file-diff detection. Not observed; defer until it bites.
 
 ## Version History
 

@@ -142,7 +142,7 @@ Each plan: spawn rnd-coder in worktree, then code-simplifier on its files (same 
        worktree: feature/run-{run-id}-04-02
 - [ ] 2.3 ▶ spawn rnd-coder + code-simplifier: plan {04-03}
        worktree: feature/run-{run-id}-04-03
-- gate: all coders return DONE | DONE_WITH_ADVISORIES (no BLOCKED, no NEEDS_CONTEXT)
+- gate: all coders return DONE | DONE_WITH_ADVISORIES (no BLOCKED, no NEEDS_CONTEXT) AND N new worktrees created (isolation circuit breaker — see `commands/c-run.md` Stage 2 isolation check)
 
 ## Stage 3 — Merge worktrees (sequential, dependency order)
 - [ ] 3.1 git checkout {trunk}; verify clean
