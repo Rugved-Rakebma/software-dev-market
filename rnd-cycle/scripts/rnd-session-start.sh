@@ -106,6 +106,7 @@ if [ -d "$RND_DIR/backlog" ]; then
 
   shopt -s nullglob 2>/dev/null
   for item in "$RND_DIR/backlog"/*.md; do
+    [ "$(basename "$item")" = "index.md" ] && continue
     BACKLOG_TOTAL=$((BACKLOG_TOTAL + 1))
     PRIORITY=$(grep -m1 '^priority:' "$item" 2>/dev/null | sed 's/^priority: *//' || true)
     case "$PRIORITY" in

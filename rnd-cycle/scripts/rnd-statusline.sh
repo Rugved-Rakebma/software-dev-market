@@ -145,6 +145,7 @@ NOW_EPOCH=$(date "+%s" 2>/dev/null || echo 0)
 if [ -d "$RND_DIR/backlog" ]; then
   shopt -s nullglob 2>/dev/null
   for item in "$RND_DIR/backlog"/*.md; do
+    [ "$(basename "$item")" = "index.md" ] && continue
     BACKLOG_TOTAL=$((BACKLOG_TOTAL + 1))
     grep -q 'priority: critical' "$item" 2>/dev/null && BACKLOG_CRITICAL=$((BACKLOG_CRITICAL + 1))
     grep -q 'priority: high' "$item" 2>/dev/null && BACKLOG_HIGH=$((BACKLOG_HIGH + 1))
