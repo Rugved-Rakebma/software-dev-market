@@ -1,0 +1,30 @@
+# .rnd/config.toml — the ONLY thing a repo customizes.
+# Everything else (schemas, standards canon, gates) is owned by the rnd plugin.
+
+[anchors]
+# Doc roots the anchor gate checks (repo-relative).
+roots = ["docs/living/architecture", "docs/living/operations"]
+
+[doctrine]
+# The outside authority this repo's doctrine tier reads (a corpus, a spec,
+# a standard). Empty = no doctrine tier; `rnd standards --write` skips it and
+# doctrine docs use the rejected-alternative staleness test instead of a
+# coverage counter.
+authority = ""
+
+[tiers]
+# Frozen tier directory names under docs/ (dated records, never updated).
+frozen = ["design", "handoff", "research"]
+
+# One [[surfaces]] block per surface doc `rnd docs-check` should diff.
+#   name    — label in output
+#   command — shell command that prints ONE registered entry per line
+#             (ask the assembled program, never grep source patterns)
+#   doc     — repo-relative doc that documents the surface
+#   pattern — python regex; every match in the doc = one documented entry
+#
+# [[surfaces]]
+# name = "http-api"
+# command = "python -c 'from app import app; [print(r.path) for r in app.routes]'"
+# doc = "docs/living/operations/http-api.md"
+# pattern = "^\\| `(/[\\w/{}.-]*)`"
