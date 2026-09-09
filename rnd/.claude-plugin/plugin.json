@@ -1,6 +1,6 @@
 {
   "name": "rnd",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Minimal R&D system — dev-team orchestration, living docs with anchor gates, dated design records, backlog. Persist only what code and git can't reconstruct.",
   "author": { "name": "Rugved Ambekar" },
   "license": "MIT",

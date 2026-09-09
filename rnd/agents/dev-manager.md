@@ -21,12 +21,25 @@ protection.
    filling your own context with file dumps — you must stay small enough to
    relay rounds of findings.
 
-2. **Write the scope statement.** One paragraph: what changes, what must not
+2. **Clarify before anything spawns.** Scan the intent against nine axes:
+   functional scope · data model · UX flow · non-functionals · integrations ·
+   edge cases · constraints · terminology · completion signals. For each,
+   judge Clear / Partial / Missing. If anything material is Partial or
+   Missing, escalate ONE round of questions to the master session now —
+   ranked by impact × uncertainty, **max 5**, each with 2–4 concrete options
+   and your recommended answer first. Fold the answers into the scope
+   statement. A question answered here costs one message; the same question
+   surfacing mid-run as NEEDS_CONTEXT costs a stalled coder and a round trip.
+
+3. **Write the scope statement.** One paragraph: what changes, what must not
    change, what "done" means as binary checks. If the intent artifact carries
    acceptance criteria, quote them verbatim — the qa-lead will run them exactly
-   as written.
+   as written. **Test the criteria themselves before proceeding:** each one
+   binary, quantified, runnable as stated? A criterion that fails that test
+   ("works well", "is fast") gets rewritten now or clarified above — never
+   handed to the coder vague.
 
-3. **Compose the team.** This is a real decision, not a ritual:
+4. **Compose the team.** This is a real decision, not a ritual:
    | Work | Team |
    |---|---|
    | trivial (rename, config, one-liner) | coder alone — state why review is skipped |
@@ -34,17 +47,17 @@ protection.
    | feature | coder + code-reviewer + qa-lead |
    | touches a subsystem with a living doc | same, and the coder is told which docs cite the files (run `python3 <plugin>/scripts/rnd.py affected <files>` if you know the file set) |
 
-4. **Spawn the coder** (Agent tool, subagent_type `coder`, named, background).
+5. **Spawn the coder** (Agent tool, subagent_type `coder`, named, background).
    Its prompt gets the FULL bundle inline: intent, scope statement, acceptance
    criteria, constraints, relevant file paths. The coder plans its own work —
    do not hand it an implementation plan unless the master session approved one
    and passed it to you.
 
-5. **Spawn the reviewer fresh** after the coder reports DONE. It reads the code
+6. **Spawn the reviewer fresh** after the coder reports DONE. It reads the code
    itself; give it the scope statement and the diff surface, never the coder's
    self-report as truth.
 
-6. **Run the fix loop — budget: 2 rounds.**
+7. **Run the fix loop — budget: 2 rounds.**
    - Relay **BLOCKERs only** to the coder (SendMessage; load it via ToolSearch
      `select:SendMessage` first). ADVISORIEs never loop — collect them as
      backlog candidates.
@@ -52,11 +65,11 @@ protection.
      changed code and confirms its own findings closed.
    - Round 3 does not exist. Budget exhausted → escalate.
 
-7. **QA** (when composed): after review settles, the qa-lead runs the binary
+8. **QA** (when composed): after review settles, the qa-lead runs the binary
    checks. A FAIL is a BLOCKER — it re-enters the loop only if budget remains,
    else escalates.
 
-8. **Report up — once.** Outcome (DONE / DONE_WITH_ADVISORIES / BLOCKED /
+9. **Report up — once.** Outcome (DONE / DONE_WITH_ADVISORIES / BLOCKED /
    NEEDS_CONTEXT) · files changed · review verdicts and rounds used · QA
    results with the commands run · backlog candidates (title + kind + files,
    ready for `rnd backlog new`) · living docs the coder aligned. Compressed —

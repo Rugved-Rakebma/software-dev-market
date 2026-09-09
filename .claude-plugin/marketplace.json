@@ -9,7 +9,7 @@
       "name": "rnd",
       "source": "./rnd/",
       "description": "Minimal R&D system — dev-team orchestration (manager/coder/reviewer/qa), living docs with anchor gates, dated design records, backlog. One CLI owns every schema.",
-      "version": "3.0.0"
+      "version": "3.1.0"
     }
   ]
 }

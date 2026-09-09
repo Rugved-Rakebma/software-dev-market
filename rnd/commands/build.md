@@ -10,7 +10,9 @@ Build: **$ARGUMENTS**
 1. **Resolve the intent.**
    - Looks like a backlog id (`BUG-001`)? → `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rnd.py fm --where id=<ID>` — read the matched file in full.
    - A path under `docs/design/`? → read it in full.
-   - Otherwise it is an inline ask. If it is too vague to state acceptance criteria, ask the user ONE clarifying question before spawning anything.
+   - Otherwise it is an inline ask.
+
+   **Clarify gate:** if the intent is ambiguous on any axis that would change what gets built (scope, data model, UX, non-functionals, integrations, edge cases, constraints, terminology, completion signals), ask the user now via AskUserQuestion — max 5 questions, ranked by impact × uncertainty, concrete options with your recommendation first. The dev-manager runs the same scan and will escalate what you miss; answered here it costs one message, answered mid-run it costs a stalled coder.
 
 2. **Spawn the dev-manager** — Agent tool, `subagent_type: "dev-manager"`, a descriptive `name` (e.g. `build-BUG-001`), `run_in_background: true`. Its prompt gets the FULL bundle inline:
    - the intent artifact's complete text (or the inline ask)
