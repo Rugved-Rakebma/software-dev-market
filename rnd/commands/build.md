@@ -14,17 +14,22 @@ Build: **$ARGUMENTS**
 
    **Clarify gate:** if the intent is ambiguous on any axis that would change what gets built (scope, data model, UX, non-functionals, integrations, edge cases, constraints, terminology, completion signals), ask the user now via AskUserQuestion — max 5 questions, ranked by impact × uncertainty, concrete options with your recommendation first. The dev-manager runs the same scan and will escalate what you miss; answered here it costs one message, answered mid-run it costs a stalled coder.
 
-2. **Spawn the dev-manager** — Agent tool, `subagent_type: "dev-manager"`, a descriptive `name` (e.g. `build-BUG-001`), `run_in_background: true`. Its prompt gets the FULL bundle inline:
+2. **Triage: fast path or team?**
+   - **Fast path** — clean, direct fix: scope obvious, criteria unambiguous, roughly one file, no data/interface risk. Spawn `coder` directly (skip the manager), same inline bundle as below. On DONE, offer `/rnd:verify` for a one-shot review. State that you took the fast path and why.
+   - **Team path** — everything else: multi-file, needs review rounds or QA, any clarify-gate hesitation. Continue to step 3.
+   When unsure, take the team path — a manager on a small job wastes a spawn; a solo coder on a deceptive job ships unreviewed code.
+
+3. **Spawn the dev-manager** — Agent tool, `subagent_type: "dev-manager"`, a descriptive `name` (e.g. `build-BUG-001`), `run_in_background: true`. Its prompt gets the FULL bundle inline:
    - the intent artifact's complete text (or the inline ask)
    - acceptance criteria as binary checks (derive them if the artifact lacks them — state your derivation)
    - constraints you know from this session (branch, style rules, files to avoid)
    - the plugin scripts path: `${CLAUDE_PLUGIN_ROOT}/scripts/rnd.py`
 
-3. **Keep working.** The run is autonomous below you. When the manager's report or an escalation arrives, relay it to the user compressed.
+4. **Keep working.** The run is autonomous below you. When the manager's report or an escalation arrives, relay it to the user compressed.
 
-4. **On escalation** (disputed BLOCKER, budget exhausted, BLOCKED, NEEDS_CONTEXT, scope explosion): present both positions in point form, get the user's ruling, SendMessage it back to the manager by name.
+5. **On escalation** (disputed BLOCKER, budget exhausted, BLOCKED, NEEDS_CONTEXT, scope explosion): present both positions in point form, get the user's ruling, SendMessage it back to the manager by name.
 
-5. **On completion:** relay outcome · files · verdicts · QA results. Offer the report's backlog candidates: `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rnd.py backlog new <kind> "<title>" --files ...` — one per candidate the user accepts. If the intent was a backlog item and the run is DONE, offer `backlog close <ID> --resolution "<summary>"`.
+6. **On completion:** relay outcome · files · verdicts · QA results. Offer the report's backlog candidates: `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rnd.py backlog new <kind> "<title>" --files ...` — one per candidate the user accepts. If the intent was a backlog item and the run is DONE, offer `backlog close <ID> --resolution "<summary>"`.
 
 ## Notes
 
