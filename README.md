@@ -27,7 +27,7 @@ v3 keeps five things and deletes everything else.
 |---|---|
 | `/rnd:build <intent>` | A **dev-manager** agent investigates, composes a team (coder · code-reviewer · qa-lead), runs the fix loop one level below your session, and reports one settled outcome. You stay in your master session. |
 | `/rnd:verify` | One adversarial reviewer on the current diff — BLOCKER/ADVISORY with `path:Symbol` anchors. |
-| `/rnd:design <topic>` | Explore + attack in conversation. A dated record is written **only** when a real alternative was rejected. |
+| `/rnd:design <topic>` | Explore + attack in conversation. A dated record only for design work that must outlive the session — most design work produces zero artifacts. |
 | `/rnd:backlog` | Add / list / close / sweep. Ids and frontmatter stamped by the CLI; triage is always human. |
 | `/rnd:docs` | Scaffold the living-docs tiers, derive architecture/surface docs from source (forked subagents), or audit the whole set. |
 
@@ -57,8 +57,8 @@ docs/design/     dated records (frozen by git mv, never rewritten)
 ```
 
 No state.md. No sessions. No locks. No "current" documents. Plans are
-ephemeral; git history is the record; decisions capture only what a diff
-can't — the alternative you rejected.
+ephemeral; git history is the record; living docs hold only the present —
+no decision history, no changelogs, enforced by `rnd docs-lint`.
 
 ## Docs
 
