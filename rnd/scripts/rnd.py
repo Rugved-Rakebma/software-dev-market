@@ -89,7 +89,7 @@ FM_RE = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*\r?\n", re.DOTALL)
 
 BACKLOG_KINDS = ("bug", "debt", "feat", "perf")
 BACKLOG_STATUS = ("open", "closed")
-RECORD_KINDS = ("design", "decision")
+RECORD_KINDS = ("design",)
 RECORD_STATUS = ("live", "superseded")
 
 
@@ -966,6 +966,76 @@ def cmd_affected(args) -> int:
 
 
 # --------------------------------------------------------------------------- #
+# docs-lint — history/transition prose in living docs
+# --------------------------------------------------------------------------- #
+
+#: Living docs hold the present; git holds history. These patterns are the
+#: tell-tale prose of sessions journaling "what changed" into a living doc.
+#: The same list is quoted in the shared standards (living/CLAUDE.md rule 6) —
+#: rule and gate deliberately match.
+_LINT_PATTERNS = (
+    (re.compile(r"\bpreviously\b", re.I), "transition narration"),
+    (re.compile(r"\bformerly\b", re.I), "transition narration"),
+    (re.compile(r"\bno longer\b", re.I), "transition narration"),
+    (re.compile(r"\bused to (?:be|have|do|use|run|call|live)\b", re.I),
+     "transition narration"),
+    (re.compile(
+        r"\b(?:was|were|has been|have been) "
+        r"(?:removed|renamed|deleted|replaced|migrated|moved|changed|"
+        r"refactored|rewritten|introduced|added)\b", re.I),
+     "change narration"),
+    (re.compile(r"\bnow (?:uses|lives|runs|returns|handles|supports)\b", re.I),
+     "change narration"),
+    (re.compile(r"\bas of 20\d\d\b", re.I), "dated claim"),
+    (re.compile(r"\(20\d\d-\d\d-\d\d\)"), "dated claim"),
+    (re.compile(r"^\s*[-*+] +.*\b20\d\d-\d\d-\d\d\b"), "dated bullet (journal entry)"),
+    (re.compile(r"\bchangelog\b", re.I), "changelog reference"),
+    (re.compile(r"\bwhat (?:worked|didn't work|we tried|changed)\b", re.I),
+     "session journaling"),
+    (re.compile(r"—\s*REMOVED\b|\bREMOVED\s*—", re.I), "obituary"),
+)
+
+
+def cmd_docs_lint(args) -> int:
+    roots = args.paths or list(LIVING_ROOTS)
+    docs = _living_docs(roots)
+    if not docs:
+        print(f"docs-lint: no docs under {', '.join(roots)} — nothing to lint.")
+        return 0
+    findings: list[tuple[Path, int, str, str]] = []
+    for doc in docs:
+        in_fence = False
+        for n, raw in enumerate(
+            doc.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            if FENCE.match(raw):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            # Inline code spans are citations/commands, not prose.
+            prose = CODE_SPAN.sub("", raw)
+            for pat, label in _LINT_PATTERNS:
+                m = pat.search(prose)
+                if m:
+                    findings.append((doc, n, m.group(0), label))
+    if not findings:
+        print(f"docs-lint: {len(docs)} doc(s), no history prose.")
+        return 0
+    by_doc: dict[Path, list] = {}
+    for doc, n, frag, label in findings:
+        by_doc.setdefault(doc, []).append((n, frag, label))
+    for doc, items in by_doc.items():
+        print(f"\n{doc.relative_to(REPO)}  ({len(items)})")
+        for n, frag, label in items:
+            print(f"  :{n:<4} {label} — {frag!r}")
+    print(f"\ndocs-lint: {len(findings)} finding(s) across {len(by_doc)} doc(s).")
+    print("Living docs hold the present; git holds history. Rewrite each line "
+          "as current state, or delete it.")
+    return E_FINDINGS
+
+
+# --------------------------------------------------------------------------- #
 # docs-check — surface diff via config bindings
 # --------------------------------------------------------------------------- #
 
@@ -1310,12 +1380,9 @@ def cmd_backlog_close(args) -> int:
 
 
 def cmd_record_new(args) -> int:
-    if args.kind not in RECORD_KINDS:
-        print(f"record: kind must be one of {RECORD_KINDS}", file=sys.stderr)
-        return E_USAGE
     design_dir = REPO / "docs" / "design"
     design_dir.mkdir(parents=True, exist_ok=True)
-    fm = {"kind": args.kind, "date": today(), "status": "live", "refs": []}
+    fm = {"kind": "design", "date": today(), "status": "live", "refs": []}
     errs = validate_record(fm, args.title)
     if errs:
         print("\n".join(errs), file=sys.stderr)
@@ -1384,6 +1451,10 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("docs-check", help="surface docs vs the real surface")
     p.set_defaults(fn=cmd_docs_check)
 
+    p = sub.add_parser("docs-lint", help="history/transition prose in living docs")
+    p.add_argument("paths", nargs="*", help=f"doc roots (default: {LIVING_ROOTS})")
+    p.set_defaults(fn=cmd_docs_lint)
+
     p = sub.add_parser("standards", help="docs standards vs plugin canon")
     p.add_argument("--write", action="store_true",
                    help="generate standards files, preserving binding regions")
@@ -1405,7 +1476,6 @@ def main(argv: list[str] | None = None) -> int:
     rsub = p.add_subparsers(dest="rcmd", required=True)
     r = rsub.add_parser("new")
     r.add_argument("title")
-    r.add_argument("--kind", default="design", choices=RECORD_KINDS)
     r.set_defaults(fn=cmd_record_new)
 
     p = sub.add_parser("init", help="scaffold .rnd/")

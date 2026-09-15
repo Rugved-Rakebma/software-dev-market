@@ -48,7 +48,8 @@ python3 scripts/rnd.py affected <files...>          # the hook's engine, <200ms
 python3 scripts/rnd.py docs-check                   # [[surfaces]] bindings diff
 python3 scripts/rnd.py standards [--write]          # canon vs repo, bindings preserved
 python3 scripts/rnd.py backlog new <kind> "<title>" [--files ..] | close <ID> --resolution ".."
-python3 scripts/rnd.py record new "<title>" [--kind design|decision]
+python3 scripts/rnd.py record new "<title>"     # design records only
+python3 scripts/rnd.py docs-lint                # history/transition prose in living docs
 python3 scripts/rnd.py init
 ```
 
@@ -59,7 +60,7 @@ Exit codes: 0 clean · 1 findings/drift · 2 argparse · 3 usage/config.
 
 | | keys | enums |
 |---|---|---|
-| design record | kind · date · status · refs · [supersedes] | kind: design\|decision · status: live\|superseded |
+| design record | kind · date · status · refs | kind: design · status: live\|superseded |
 | backlog item | id · kind · status · opened · files · seen · last-seen · [closed · resolution] | kind: bug\|debt\|feat\|perf · status: open\|closed |
 
 One date format: `YYYY-MM-DD`. Ids: `KIND-NNN`, sequenced by the CLI. Never
@@ -80,6 +81,12 @@ Ported from a field-proven checker (manifested-reality-agent's
 - skips: `CLAUDE.md` (quotes banned forms to ban them) · `docs/design/`
   (frozen — rewriting erases provenance) · `doctrine/` (cites sources)
 - same anchor 3+ times in one doc = defect (reported by the default check)
+
+**No decision history anywhere.** Living docs carry no `Decisions` sections, no incident
+stories, no transition narration — constraints survive only as present-tense live rules stated
+where the reader meets them. `docs-lint` greps living tiers for the banned-phrase list (the
+same list quoted in living-CLAUDE rule 6 — rule and gate deliberately match). Git holds
+history; living docs hold the present.
 
 ## Standards canon mechanics
 

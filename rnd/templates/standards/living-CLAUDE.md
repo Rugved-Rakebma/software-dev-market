@@ -16,7 +16,7 @@ test; this file is what they share.
 *(A repo may have only one or two of these. An empty tier is worse than an absent one — delete
 the directory rather than leaving it as a promise.)*
 
-## The five rules
+## The six rules
 
 **1. Update in the same commit as the change. Never "flag it."**
 A living doc is part of the change, not follow-up work. If a route, command, entity, path, or
@@ -41,6 +41,19 @@ symbol as an anchor. **Green is necessary, never sufficient.**
 **5. A doc that cannot be kept true gets deleted, not downgraded.**
 There is no "mostly accurate" tier. If nobody will maintain it, version control already holds it.
 
+**6. Present state only. Never the transition.**
+A living doc states what IS — never what was, what changed, or how it got here. **Git holds
+history; these docs hold the present.** When aligning a doc after a code change, rewrite the
+claim as the new current truth; do not narrate the update. No session summaries, no "what
+worked", no iteration notes, no dated entries — a living doc is not a journal, and an update
+is not an event to record.
+
+Banned phrases (enforced by `rnd docs-lint`, which greps for exactly these): *previously ·
+formerly · no longer · used to · was/has been removed/renamed/replaced/changed/migrated ·
+now uses/lives/runs · as of \<year\> · dated bullets · changelog · what worked/what changed ·
+"— REMOVED"*. If a line needs one of these words, the line describes history — delete it or
+restate it tenselessly.
+
 ## The known hole
 
 **These files load when you edit the doc. They do not load when you edit the code that falsifies
@@ -53,9 +66,10 @@ Two mitigations, both real:
 - **The always-loaded file:** the repo-root instruction file — the one loaded in every session
   regardless of what you touch — carries the same-commit obligation and the anchor form. Put
   cross-cutting obligations there, not only here.
-- **The gate:** `rnd docs-check` diffs each living doc against the real surface, and `rnd
-  anchors` resolves every code citation. These exist; they are not honour-system any more. Rule 4
-  still stands — a gate that passes is not a doc that is true.
+- **The gate:** `rnd docs-check` diffs each living doc against the real surface, `rnd anchors`
+  resolves every code citation, and `rnd docs-lint` catches history prose (rule 6). These exist;
+  they are not honour-system any more. Rule 4 still stands — a gate that passes is not a doc
+  that is true.
 
 <!-- rnd:binding gate-name -->
 **In this repo the gate is invoked as `rnd docs-check` and `rnd anchors`.** *(Replace with the

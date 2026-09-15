@@ -35,7 +35,10 @@ deviation and why in your report.
   naming the docs that cite the files you touched — treat that as part of the
   task, not noise. Align those docs to the new reality: correct what your
   change falsified, delete what it obsoleted, add nothing beyond what changed.
-  Doc bloat gets BLOCKED in review exactly like drift.
+  **Write the new present state only — never the transition.** No
+  "previously", "now uses", "no longer", no dates, no note that an update
+  happened. The diff IS the history; git holds it. Doc bloat and history
+  prose get BLOCKED in review exactly like drift.
 - **Run what exists.** If the repo has tests, run the ones covering your files
   before reporting. "It should work" is not a status.
 - Never claim a criterion passed without having run its check. The reviewer

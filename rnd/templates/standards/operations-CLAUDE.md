@@ -20,6 +20,10 @@ Surface docs still cite code, so the anchor gate covers this directory too.
 **Do not write docs for procedures nobody has run.** A runbook for a release that has never
 shipped is fiction with a shell prompt in front of it.
 
+**Rule 6 of `../CLAUDE.md` applies with full force here.** A runbook states the current
+procedure — never the one it replaced, never "what we tried", never a dated fix log. Runbooks
+are where session journaling accumulates fastest; `rnd docs-lint` covers this directory too.
+
 ## Staleness test — enumerate, then diff
 
 **Ask the assembled program, never a grep of source patterns.** A registration idiom you did not

@@ -24,7 +24,7 @@ standards file the caller named instead). Most of it applies to you: live-code-o
 header, the code-anchor form, structure-by-concern, map-not-mirror.
 
 **One part does not.** Its section skeleton is written for subsystems (`Boundaries` / `The model`
-/ `Seams` / `Decisions` / `Flows`). You use the skeleton in §4 instead. If the standards file
+/ `Seams` / `Flows`). You use the skeleton in §4 instead. If the standards file
 ships its own surface skeleton, that one wins over this one.
 
 **Its ban on a file/entry table does not apply to you.** For a subsystem that table is
@@ -94,10 +94,10 @@ row in the doc.**
     Shape          how the surface is reached, auth, transport, negotiation
     Inventory      THE TABLE — every registered entry. The spine of the doc
     Conventions    what holds across entries, and the exceptions
-    Decisions      each with its reason and the alternative rejected
 
-Omit `Decisions` if the surface genuinely has none of its own — many do not, because the decisions
-live in the subsystems behind it. Do not invent surface decisions to fill it.
+There is no `Decisions` section — decision history does not live in this tier. A load-bearing
+constraint of the surface itself is stated as a live rule inside `Conventions`, present tense,
+no dates, no alternatives.
 
 **There is no `Open` section.** A gap is stated in the section where the reader meets it, as **what
 the surface does instead** — an unauthenticated route belongs in `Conventions` beside the auth
@@ -137,7 +137,7 @@ not identify** — that usually means a subsystem is missing from the decomposit
 surface is holding domain logic it should not.
 
 **E · Could not determine.** Behaviour you could not pin down, entries whose purpose is unclear,
-decisions with no recoverable reason.
+conventions with no provable basis.
 
 ## Hard limits
 

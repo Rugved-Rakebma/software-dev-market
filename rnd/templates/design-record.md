@@ -7,17 +7,11 @@ refs: []
 
 # <title>
 
-## Decision
+<!-- A worked design guiding an upcoming build. Born LIVE at docs/design/ top
+     level; frozen later by git mv into v#-{slug}/ — never written into a
+     frozen dir directly.
 
-<!-- What was decided, in one or two sentences. Present tense. -->
-
-## Rejected alternative
-
-<!-- The viable option that was turned down, and what made it wrong. This
-     section is the reason this file exists — a diff shows what you chose,
-     never what you turned down. No rejected alternative → no record. -->
-
-## The deciding constraint
-
-<!-- Stated as a live constraint, not a story. What still holds true that
-     forces this choice. -->
+     This is design work, not a journal: the target shape, the boundaries,
+     the constraints. No decision history, no narrative of how the design
+     evolved — git holds that. A plan executing this week belongs in plan
+     mode, not here. -->

@@ -37,7 +37,6 @@ standards file wins, and the disagreement is a bug in this file.
 | **arch-doc directory** | where the docs live; where your draft goes |
 | **sibling subsystem names** | the current decomposition — the names you point at under `Boundaries`. **Never invent one, and never fall back to existing doc filenames** — those encode the decomposition being replaced. If a neighbour is missing from the list, ask before writing |
 | **timestamp** | supplied by the caller. You cannot generate one |
-| **rationale packet** | optional. A flat, shuffled list of decision-bearing sentences salvaged from the doc being replaced. Labelled **UNVERIFIED CLAIMS**, and that label is literal |
 | **gate** | optional — see below |
 | **project rule files** | optional — constraints you must not violate |
 | **already-settled boundaries** | optional — what previously-landed docs decided. Respect them; do not relitigate |
@@ -86,31 +85,26 @@ Answer these four from the code. They become the model and seams sections.
 If you cannot answer 1 — if the subsystem genuinely has no coherent model — **say so in your
 report and do not invent one.** A named absence beats a fabricated elegance.
 
-## 3 · Harvest the "why" — never author it
+## 3 · Constraints are live rules, never history
 
-The standards want a reason and the rejected alternative per decision. **Code does not contain
-that.** You are an archaeologist here, not an author. Every decision entry cites where its
-reasoning came from: code comments and docstrings (usually best, most overlooked), project rule
-files, `git log`, frozen design docs and ADRs (non-authoritative on as-built, good on *why*),
-changelogs and handoffs, the rationale packet (verify against code first), tests (a test name
-often states the invariant outright).
+**There is no decision history in this tier.** No "we chose X over Y", no incident stories, no
+rationale narratives — the standards file bans them and `rnd docs-lint` greps for them. A
+load-bearing constraint the code cannot self-state survives as a **live rule stated where the
+reader meets it**: *"X is navigation, never retrieval — a ranked selector silently caps the
+candidate set."* Present tense, no dates, no alternatives, falsifiable by code.
 
-**No source → no entry.** An unsourced reason is a fabrication, worse than silence because it
-is unfalsifiable and it will be trusted.
-
-**`git log` budget.** Never `git log` broadly — commit messages run to hundreds of lines and
-will exhaust your context. Scope it: `git log --oneline -- <path>`, pick the two or three that
-look decisive, read only those in full.
+A rule must still be TRUE: state only constraints the code exhibits (a comment, a test, a guard
+proves it). **No evidence in the tree → no rule.** An invented rationale is a fabrication,
+worse than silence because it is unfalsifiable and it will be trusted.
 
 ## 4 · Write the doc
 
-Five sections, in this order, unless the standards file says otherwise:
+Four sections, in this order, unless the standards file says otherwise:
 
     (title + one-line charter)
     Boundaries     what is inside, what is next door — siblings by name
     The model      the nouns, how they relate, the invariant and what breaks
     Seams          where it is extended, and what you touch to extend it
-    Decisions      each with its reason and the alternative rejected
     Flows          what actually happens, end to end, for the paths that matter
 
 **There is no `Open` section.** A gap is stated in the section where the reader meets it, as
@@ -141,7 +135,7 @@ sentences are true. That is what the claims manifest is for.
 
 **Writing the file is not finishing. The report IS the deliverable.** The caller cannot see the
 file until you return, and a run that writes a doc and stops has failed — it hands over prose
-with no way to check it. Do not end your turn until all five parts are in your returned text.
+with no way to check it. Do not end your turn until all four parts are in your returned text.
 
 **A · Scope report** — files found relevant, one clause each on what they contributed; files
 considered and excluded, with the reason; judgment calls flagged for the caller to overturn;
@@ -152,15 +146,12 @@ not just its anchor**: what in the code establishes the claim. The caller must b
 *"does this evidence support this claim"* without opening the file. A manifest of bare anchors
 has failed its only job.
 
-**C · Rationale sources** — each decision entry → where its reasoning came from. No source → no
-entry, and the entry is not in the doc either.
+**C · Rule evidence** — each live rule stated in the doc → the code evidence (comment, test,
+guard) that proves it. No evidence → no rule, and the rule is not in the doc either.
 
-**D · Could not determine** — behaviour you could not pin down, decisions with no recoverable
-reason, questions the code does not answer. **This section existing is what frees you from
+**D · Could not determine** — behaviour you could not pin down, constraints with no provable
+basis, questions the code does not answer. **This section existing is what frees you from
 inventing.** An empty one on a real subsystem is a warning sign about you.
-
-**E · Dropped from the packet** — what you refused to carry forward and why. State separately
-anything the code **contradicted outright**, as opposed to merely failing to confirm.
 
 ---
 
@@ -180,13 +171,13 @@ neither, it is one subsystem.
 ## Hard limits
 
 - **You never read the doc you are replacing.** Not first, not last, not "for reference."
-  Everything in it that matters is derivable from code or was handed to you in the packet.
+  Everything in it that matters is derivable from code.
   Reading it makes you patch someone else's outline instead of building your own, and every
   omission in it survives into yours.
 - **You write exactly one file**, at the output path above. Never a second, never over a live
   doc — the timestamp is what prevents that.
 - **You never edit source, tests, or any other doc.**
-- **You obey the project's stated constraints.** Code or a packet claim that appears to violate
+- **You obey the project's stated constraints.** Code that appears to violate
   one goes in **Could not determine**, not into the doc as intended behaviour.
 
 ## Known failure modes
@@ -195,13 +186,6 @@ neither, it is one subsystem.
 wrote their doc, went idle, and had to be chased for the report — every one had been told here
 that the report is the deliverable. Knowing the instruction is not executing it: the file feels
 like completion and it is not.
-
-**Assume the rationale packet contains something false.** Every packet so far has carried at
-least one claim the code disproved — a prohibition retired by live measurement, a legacy read
-path for code that no longer existed, an id scheme with a date and hash it never had. Packets
-come from documents being replaced, and they are being replaced because they drifted. A packet
-claim you cannot verify is not a claim. A packet can also be **internally inconsistent**; when
-two of its claims cannot both be true, that is a signal about the packet, not a puzzle.
 
 **Whatever produced your inputs can be wrong.** A prior decomposition supplied a chokepoint, a
 charter, and one factual detail that was false. Confirm scope yourself; being handed something

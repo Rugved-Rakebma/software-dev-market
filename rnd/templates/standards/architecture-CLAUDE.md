@@ -9,13 +9,13 @@ where the seams are, why it is shaped this way, and what breaks if they change i
 **Nothing regenerates them.** A stale claim stays stale until a human fixes it, which makes rule
 1 of `../CLAUDE.md` — update in the same commit — the load-bearing one.
 
-The nine standards below are general and were earned: each one replaced something that
+The eight standards below are general and were earned: each one replaced something that
 demonstrably went wrong. Change them if this project needs different ones, but change them
 deliberately — the doc-writing agents read this file as their spec and follow it exactly.
 
 ---
 
-## The nine standards
+## The eight standards
 
 ### 1 · Live code only
 
@@ -34,12 +34,14 @@ corpse.
 Removal notes only ever accrue. A section titled `<Thing> — REMOVED` is a permanent monument to
 something a reader does not need to know about.
 
-**An incident may be stated tenselessly, and often should be.** The strongest rationale in a
-codebase is frequently a night something failed. Standard 8 wants the rejected alternative; this
-standard bans the date and the corpse. Both are satisfied by *"was paid for once, when one bad
-argument took the service down and the phone stayed silent"* — the force survives, the changelog
-entry does not. A naive reading of this standard deletes the most persuasive material in the
-file; do not let it.
+**There is no decision history in this tier — anywhere.** No incident stories, no "we chose X
+over Y", no rationale narratives. A constraint the code cannot self-state survives **as a live
+rule, stated where the reader meets it**: *"X is navigation, never retrieval — a ranked selector
+silently caps the candidate set."* Present tense, no alternatives, no dates, falsified by code
+like every other line. If a rule is not worth stating tenselessly, it is not worth stating.
+
+The mechanical gate for this standard is `rnd docs-lint` — the same banned-phrase list as
+`../CLAUDE.md` rule 6, enforced.
 
 ### 2 · Structure by concern, never by file
 
@@ -181,12 +183,12 @@ exist.
 |---|---|---|
 | 1 | *(title + one-line purpose)* | what this subsystem is for |
 | 2 | **Boundaries** | Owns · Does NOT own · Talks to |
-| 3 | **The model** | the 2–5 concepts and how they relate — what you must understand before reading code |
+| 3 | **The model** | the 2–5 concepts and how they relate — what you must understand before reading code. Load-bearing constraints live here or in `Seams`, as live rules (standard 1) |
 | 4 | **Seams** | where it is extended, what is pluggable, what is load-bearing |
-| 5 | **Decisions** | each with its reason and the alternative rejected |
-| 6 | **Flows** | non-obvious paths only. Omit the section if there are none |
+| 5 | **Flows** | non-obvious paths only. Omit the section if there are none |
 
-Exact casing: `Boundaries` · `The model` · `Seams` · `Decisions` · `Flows`.
+Exact casing: `Boundaries` · `The model` · `Seams` · `Flows`. There is no `Decisions` section —
+decision history does not live in this tier (standard 1).
 
 **Where a gap goes: the section where the reader meets it.** A gap is stated as what the code
 does *instead* — never as a bullet list of absences. *"X is not enforced at fire time; the
@@ -205,15 +207,7 @@ position that should carry the model.
 **`Boundaries` is the highest-value section.** Owns / Does NOT own is what answers "where does
 this go?" before someone puts it in the wrong place.
 
-### 8 · A decision without its reason is not architecture
-
-"What" is recoverable from the code. **"Why this and not the obvious alternative" is not** — it
-is the entire reason the doc exists. Every entry under `Decisions` names the alternative that was
-rejected and what made it wrong, stated as a live constraint rather than a story. *"A foreground
-service, not a receiver — a receiver dies in ten seconds and the sitting is twelve minutes"* is
-the shape.
-
-### 9 · Map, not mirror. No code blocks
+### 8 · Map, not mirror. No code blocks
 
 If a reader needs the code, the reference takes them there. A code block in an architecture doc
 is a second copy of a file, stale the moment the file changes.
@@ -229,7 +223,8 @@ variants of one thing — two wire dialects, two platforms, two result channels.
 <!-- rnd:binding anchor-gate -->
 ```sh
 rnd anchors                 # every anchor resolves (hard failure on a miss)
-rnd anchors --orphans       # paths cited by no doc, and docs citing dead paths
+rnd anchors --audit         # anchors that resolve but contradict their prose (advisory)
+rnd docs-lint               # history/transition prose (banned by ../CLAUDE.md rule 6)
 ```
 
 *(Replace with this repo's task-runner wrapper if it has one — e.g. `just anchors`. Whatever it

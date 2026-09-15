@@ -17,7 +17,7 @@ The path tells you which. There is no index, no status table, and no doc that re
 | as-built truth — falsified when the **code** changes | `living/architecture/` |
 | how to drive the system — falsified when an **interface or procedure** changes | `living/operations/` |
 | what the system *should* do — falsified by a **new reading of an outside authority**, never by code | `living/doctrine/` |
-| live design work — the decision as it currently stands | `design/` **top level** (editable) |
+| live design work — the design as it currently stands | `design/` **top level** (editable) |
 | design work superseded by a later generation | `design/v#-{slug}/` (frozen — see below) |
 <!-- rnd:binding frozen-tiers -->
 | a dated notice to another team or repo | `handoff/` |
@@ -46,7 +46,7 @@ neither — they record what something looked like on a date.
 
 | | |
 |---|---|
-| **`design/*.md`** — top level | **LIVE.** The decision as it currently stands. **Editable, in place.** This is where design work is done. |
+| **`design/*.md`** — top level | **LIVE.** The design as it currently stands. **Editable, in place.** This is where design work is done. |
 | **`design/v#-{slug}/`** | **FROZEN.** A generation that a later one superseded. Closed forever. |
 | **`design/archive/`** | superseded **and** dead — describes nothing that runs. |
 

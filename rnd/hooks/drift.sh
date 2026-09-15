@@ -50,8 +50,10 @@ n=$(printf '%s\n' "$hits" | wc -l | tr -d ' ')
   echo ""
   echo "Before this change is committed: open each doc listed, verify whether your edit"
   echo "falsified any claim near those anchors, and ALIGN the doc in the same commit."
-  echo "Align ONLY — correct what changed, delete what is now false. Do NOT add new"
-  echo "sections, status headers, or prose beyond what the change requires. Standards:"
-  echo "the CLAUDE.md beside each doc. If nothing drifted, say so and move on."
+  echo "Align ONLY — rewrite claims as the new PRESENT state. Never narrate the"
+  echo "transition: no 'previously', 'now uses', 'no longer', no dates, no note that"
+  echo "an update happened — the diff IS the history. Do NOT add new sections, status"
+  echo "headers, or prose beyond what the change requires. Standards: the CLAUDE.md"
+  echo "beside each doc. If nothing drifted, say so and move on."
 } >&2
 exit 2

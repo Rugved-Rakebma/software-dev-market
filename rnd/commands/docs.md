@@ -25,9 +25,10 @@ Docs mode: **$ARGUMENTS**
 
 1. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rnd.py anchors` — hard gate, must be green.
 2. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rnd.py anchors --audit` — anchors that resolve but contradict their prose; triage each with the user.
-3. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rnd.py docs-check` — surface diff per binding.
-4. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rnd.py standards` — canon drift.
-5. Report findings in one table; fixes are same-commit edits, deletions preferred over additions.
+3. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rnd.py docs-lint` — history/transition prose; the fix is rewrite-as-present or delete, never a rewording that keeps the story.
+4. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rnd.py docs-check` — surface diff per binding.
+5. `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/rnd.py standards` — canon drift.
+6. Report findings in one table; fixes are same-commit edits, deletions preferred over additions.
 
 ## Notes
 
