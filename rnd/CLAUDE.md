@@ -110,7 +110,7 @@ python3 /tmp/rnd_smoke.py                         # round-trip in a scratch repo
 
 ## Design lineage
 
-v2 (`../rnd-cycle/`, kept as reference) was condemned by audit: 23 artifact
+v2 (`rnd-cycle/`, removed 2026-10-29; in git history at `ac49904`) was condemned by audit: 23 artifact
 types / 0 parsers, 7 incompatible status enums, prose workflow engine (c-run)
 never once run, docs derived from intent instead of source. v3 inverts each:
 parser first, one enum per key, orchestration in agents not prose, docs from

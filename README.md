@@ -16,7 +16,7 @@ reconstruct.**
 Lifecycle tooling for AI coding tends to grow ceremony: state files nothing
 reads back, specs that confine the product months later, docs that describe
 intent instead of code, artifacts written because a stage demanded them.
-The previous version of this plugin (v2, kept in `rnd-cycle/` as reference)
+The previous version of this plugin (v2, `rnd-cycle/`, now only in git history)
 had all of it — 23 artifact types and not one parser.
 
 v3 keeps five things and deletes everything else.

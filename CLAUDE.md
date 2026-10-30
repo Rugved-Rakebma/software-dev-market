@@ -1,8 +1,8 @@
 # software-dev-market — Plugin Marketplace
 
 Personal Claude Code plugin marketplace. Ships one plugin: **`rnd` v3** from
-`./rnd/`. `rnd-cycle/` is the retired v2 — reference only, not listed in the
-marketplace, never edited except for archaeology.
+`./rnd/`. The retired v2 (`rnd-cycle/`) was removed from the tree on
+2026-10-29; it lives in git history only (`git show ac49904:rnd-cycle/`).
 
 ## Structure
 
@@ -17,7 +17,6 @@ software-dev-market/
 │   ├── scripts/rnd.py    the CLI — every schema, every gate
 │   ├── hooks/            PostToolUse drift hook
 │   └── templates/        standards canon + record/backlog/config seeds
-└── rnd-cycle/                         # v2, condemned by audit — see rnd/CLAUDE.md § Design lineage
 ```
 
 ## Working on the plugin
